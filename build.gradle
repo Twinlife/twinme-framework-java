@@ -1,0 +1,104 @@
+plugins {
+    id 'com.android.library'
+    alias libs.plugins.kotlin.android
+}
+
+android {
+    compileSdkVersion 35
+    namespace 'org.twinlife.twinme'
+
+    buildFeatures {
+        buildConfig = true
+    }
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 35
+        buildConfigField "String", "VERSION", '"2.12.1"'
+
+        buildConfigField "boolean", "ENABLE_REPORT_LOCATION", "false"
+        buildConfigField "boolean", "DELETE_CONTACT_ON_UNBIND_CONTACT", "false"
+    }
+
+    flavorDimensions = ["product", "tier"]
+
+    productFlavors {
+        twinme {
+            dimension "product"
+        }
+        skred {
+            dimension "product"
+
+            buildConfigField "boolean", "ENABLE_REPORT_LOCATION", "true"
+            buildConfigField "boolean", "DELETE_CONTACT_ON_UNBIND_CONTACT", "true"
+        }
+
+        //Skred and Twinme
+        free {
+            dimension "tier"
+        }
+
+        //Twinme+
+        '+' {
+            dimension "tier"
+        }
+    }
+
+    // Only define necessary variants
+    variantFilter { variant ->
+        def names = variant.flavors*.name
+
+        if (names.contains("skred")) {
+            if(names.contains("+")) {
+                // skred doesn't have a "plus" variant
+                setIgnore(true)
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        staging {
+            initWith buildTypes.release
+        }
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'src/android/AndroidManifest.xml'
+            java.srcDirs = ['src/main/java', 'src/android/java']
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+dependencies {
+    api fileTree(include: ['*.jar'], dir: 'libs')
+    implementation project(':twinlife-framework')
+
+    implementation libs.androidx.annotation
+    implementation libs.zip4j
+    testImplementation libs.junit.jupiter
+}
+
+// Needed to configure JUnit in an Android library project.
+afterEvaluate { project ->
+    android.libraryVariants.each { variant ->
+        println variant.name
+        println tasks
+        tasks.getByName("test${variant.name.capitalize()}UnitTest") {
+            useJUnitPlatform()
+
+            maxHeapSize = '1G'
+
+            testLogging {
+                events "passed"
+            }
+        }
+    }
+}
