@@ -4,16 +4,16 @@ plugins {
 }
 
 android {
-    compileSdkVersion 35
+    compileSdkVersion libs.versions.compile.sdk.version.get()
     namespace 'org.twinlife.twinme'
 
     buildFeatures {
         buildConfig = true
     }
     defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 35
-        buildConfigField "String", "VERSION", '"2.12.1"'
+        minSdkVersion libs.versions.min.sdk.version.get() as int
+        targetSdkVersion libs.versions.target.sdk.version.get() as int
+        buildConfigField "String", "VERSION", '"2.12.2"'
 
         buildConfigField "boolean", "ENABLE_REPORT_LOCATION", "false"
         buildConfigField "boolean", "DELETE_CONTACT_ON_UNBIND_CONTACT", "false"
