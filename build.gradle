@@ -13,7 +13,7 @@ android {
     defaultConfig {
         minSdkVersion libs.versions.min.sdk.version.get() as int
         targetSdkVersion libs.versions.target.sdk.version.get() as int
-        buildConfigField "String", "VERSION", '"2.12.2"'
+        buildConfigField "String", "VERSION", '"2.12.3"'
 
         buildConfigField "boolean", "ENABLE_REPORT_LOCATION", "false"
         buildConfigField "boolean", "DELETE_CONTACT_ON_UNBIND_CONTACT", "false"
