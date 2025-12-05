@@ -20,6 +20,7 @@ import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.Serializer;
 import org.twinlife.twinlife.SerializerException;
 import org.twinlife.twinlife.SerializerFactory;
+import org.twinlife.twinlife.Twincode;
 
 import java.util.UUID;
 
@@ -101,6 +102,14 @@ public class NotificationContent {
         mSessionId = sessionId;
         mTwincodeInboundId = twincodeInboundId;
         mPriority = priority;
+        mOperation = operation;
+    }
+
+    public NotificationContent(@NonNull String operation) {
+
+        mSessionId = Twincode.NOT_DEFINED;
+        mTwincodeInboundId = Twincode.NOT_DEFINED;
+        mPriority = "low";
         mOperation = operation;
     }
 

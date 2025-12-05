@@ -159,6 +159,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeContext {
     private static final String LOG_TAG = "TwinmeContextImpl";
     private static final boolean DEBUG = false;
+    private static final boolean INFO = org.twinlife.twinlife.BuildConfig.ENABLE_INFO_LOG;
 
     private static final boolean DELETE_CONTACT_ON_UNBIND_CONTACT = BuildConfig.DELETE_CONTACT_ON_UNBIND_CONTACT;
     private static final int NOTIFICATION_REFRESH_DELAY = 1000; // 1 second
@@ -3021,7 +3022,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
                                 if (NotificationContent.SCHEMA_VERSION == schemaVersion) {
                                     NotificationContent notificationContent = (NotificationContent) NotificationContent.SERIALIZER.deserialize(null, binaryDecoder);
 
-                                    EventMonitor.event("N " + notificationContent.getTwincodeId().toString().substring(0, 6));
+                                    EventMonitor.event("N " + notificationContent.getOperation() + " " + Utils.toLog(notificationContent.getSessionId()));
 
                                     RepositoryService.FindResult result = getReceiver(notificationContent.getTwincodeId());
 
@@ -3033,13 +3034,20 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
                                     return notificationContent;
                                 }
                             }
+                            Log.e(LOG_TAG, "Firebase message with schemaId " + schemaId + "." + schemaVersion + " not recognized");
                         } catch (Exception exception) {
                             Log.e(LOG_TAG, "init: deserialize exception=" + exception);
                         }
+                    } else {
+                        Log.e(LOG_TAG, "There is no notification key to decode " + content);
                     }
                 }
             }
+        } else if ("IncomingInvocation".equals(type)) {
+            EventMonitor.event("N " + type);
+            return new NotificationContent(type);
         }
+        Log.e(LOG_TAG, "Firebase message " + type + "." + version + " not recognized");
         return null;
     }
 
@@ -3706,15 +3714,19 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             // It could be rejected also due to a `pair::bind` that was not handled.
             final boolean acceptP2P = originator.canAcceptP2P(callingUserTwincodeId);
             if (group == null && twincodeOutboundId != null && acceptP2P && peerTwincodeOutbound != null) {
-                Log.i(LOG_TAG, "Incoming in=" + Utils.toLog(twincodeInboundId) +
-                        " out=" + Utils.toLog(twincodeOutboundId) + " contact="
-                        + Utils.toLog(originator.getId()));
+                if (INFO) {
+                    Log.i(LOG_TAG, "Incoming p2p=" + Utils.toLog(peerConnectionId) + " in=" + Utils.toLog(twincodeInboundId) +
+                            " out=" + Utils.toLog(twincodeOutboundId) + " contact="
+                            + Utils.toLog(originator.getId()));
+                }
                 getConversationService().incomingPeerConnection(peerConnectionId, originator, peerTwincodeOutbound, true);
 
             } else if (group != null && group.getGroupTwincodeOutboundId() != null && twincodeOutboundId != null && peerTwincodeOutbound != null) {
-                Log.i(LOG_TAG, "Incoming in=" + Utils.toLog(twincodeInboundId) +
-                        " out=" + Utils.toLog(twincodeOutboundId) + " group="
-                        + Utils.toLog(group.getGroupTwincodeOutboundId()));
+                if (INFO) {
+                    Log.i(LOG_TAG, "Incoming p2p=" + Utils.toLog(peerConnectionId) + " in=" + Utils.toLog(twincodeInboundId) +
+                            " out=" + Utils.toLog(twincodeOutboundId) + " group="
+                            + Utils.toLog(group.getGroupTwincodeOutboundId()));
+                }
                 getConversationService().incomingPeerConnection(peerConnectionId, group, peerTwincodeOutbound, false);
 
             } else {
