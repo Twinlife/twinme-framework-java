@@ -134,11 +134,11 @@ public class BindContactExecutor extends AbstractConnectedTwinmeExecutor {
             if ((mState & UPDATE_TWINCODE_OUTBOUND) == 0) {
                 mState |= UPDATE_TWINCODE_OUTBOUND;
 
-                if (mPreviousPeerTwincodeOutbound != null && mPreviousPeerTwincodeOutbound.isSigned()) {
+                if (mPeerTwincodeOutbound != mPreviousPeerTwincodeOutbound && mPreviousPeerTwincodeOutbound != null && mPreviousPeerTwincodeOutbound.isSigned()) {
                     mTwinmeContextImpl.getTwincodeOutboundService().associateTwincodes(mTwincodeOutbound, mPreviousPeerTwincodeOutbound, mPeerTwincodeOutbound);
                 }
-                if (mPeerTwincodeOutbound.isTrusted() && mTwincodeOutbound.isTrusted()) {
-                    final Capabilities capabilities = mContact.getIdentityCapabilities();
+                final Capabilities capabilities = mContact.getIdentityCapabilities();
+                if (mPeerTwincodeOutbound.isTrusted() && mTwincodeOutbound.isTrusted() && !capabilities.isTrusted(mPeerTwincodeOutbound.getId())) {
                     capabilities.setTrusted(mPeerTwincodeOutbound.getId());
 
                     final String value = capabilities.toAttributeValue();

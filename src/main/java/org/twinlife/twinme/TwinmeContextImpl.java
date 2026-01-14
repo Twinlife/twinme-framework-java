@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2014-2025 twinlife SA.
+ *  Copyright (c) 2014-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -2134,26 +2134,29 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
         mActiveConversationId.set(conversation.getId());
 
-        RepositoryObject subject = conversation.getSubject();
-        List<org.twinlife.twinlife.Notification> notifications = getNotificationService().getPendingNotifications(subject);
-        for (org.twinlife.twinlife.Notification notification : notifications) {
-            NotificationType type = notification.getNotificationType();
-            if (!notification.isAcknowledged() && (type == NotificationType.NEW_TEXT_MESSAGE
-                    || type == NotificationType.NEW_AUDIO_MESSAGE
-                    || type == NotificationType.NEW_IMAGE_MESSAGE
-                    || type == NotificationType.NEW_VIDEO_MESSAGE
-                    || type == NotificationType.NEW_FILE_MESSAGE
-                    || type == NotificationType.NEW_GEOLOCATION
-                    || type == NotificationType.NEW_GROUP_INVITATION
-                    || type == NotificationType.UPDATED_CONTACT
-                    || type == NotificationType.UPDATED_AVATAR_CONTACT
-                    || type == NotificationType.NEW_CONTACT
-                    || type == NotificationType.NEW_GROUP_JOINED
-                    || type == NotificationType.RESET_CONVERSATION
-                    || type == NotificationType.UPDATED_ANNOTATION)) {
-                acknowledgeNotification(BaseService.DEFAULT_REQUEST_ID, notification);
+        // Update the pending notification from the twinlife thread to avoid blocking the main UI thread.
+        mTwinlifeExecutor.execute(() -> {
+            RepositoryObject subject = conversation.getSubject();
+            List<org.twinlife.twinlife.Notification> notifications = getNotificationService().getPendingNotifications(subject);
+            for (org.twinlife.twinlife.Notification notification : notifications) {
+                NotificationType type = notification.getNotificationType();
+                if (!notification.isAcknowledged() && (type == NotificationType.NEW_TEXT_MESSAGE
+                        || type == NotificationType.NEW_AUDIO_MESSAGE
+                        || type == NotificationType.NEW_IMAGE_MESSAGE
+                        || type == NotificationType.NEW_VIDEO_MESSAGE
+                        || type == NotificationType.NEW_FILE_MESSAGE
+                        || type == NotificationType.NEW_GEOLOCATION
+                        || type == NotificationType.NEW_GROUP_INVITATION
+                        || type == NotificationType.UPDATED_CONTACT
+                        || type == NotificationType.UPDATED_AVATAR_CONTACT
+                        || type == NotificationType.NEW_CONTACT
+                        || type == NotificationType.NEW_GROUP_JOINED
+                        || type == NotificationType.RESET_CONVERSATION
+                        || type == NotificationType.UPDATED_ANNOTATION)) {
+                    acknowledgeNotification(BaseService.DEFAULT_REQUEST_ID, notification);
+                }
             }
-        }
+        });
 
         mNotificationCenter.onSetActiveConversation(conversation);
     }
