@@ -3677,7 +3677,9 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         } else if (offer.video || offer.audio) {
             if (isVisible(originator)) {
                 Bitmap avatar = null;
-                if (originator.getAvatarId() != null) {
+                if (group != null && group.getAvatarId() != null) {
+                    avatar = getImageService().getImage(group.getAvatarId(), ImageService.Kind.THUMBNAIL);
+                } else if (originator.getAvatarId() != null) {
                     avatar = getImageService().getImage(originator.getAvatarId(), ImageService.Kind.THUMBNAIL);
                 }
                 mNotificationCenter.onIncomingCall(originator, avatar, peerConnectionId, offer);
