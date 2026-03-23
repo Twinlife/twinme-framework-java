@@ -279,7 +279,7 @@ public class BindAccountMigrationExecutor extends AbstractConnectedTwinmeExecuto
         }
 
         if (operationId == INVOKE_TWINCODE_OUTBOUND) {
-            if (errorCode == ErrorCode.ITEM_NOT_FOUND) {
+            if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) {
 
                 mState |= INVOKE_TWINCODE_OUTBOUND_DONE;
 

@@ -546,7 +546,7 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
         }
 
         // The delete operation succeeds if we get an item not found error.
-        if (errorCode == ErrorCode.ITEM_NOT_FOUND) {
+        if (errorCode == ErrorCode.ITEM_NOT_FOUND | errorCode == ErrorCode.EXPIRED) {
             UUID id = Utils.UUIDFromString(errorParameter);
             switch (operationId) {
                 case DELETE_CONTACT:

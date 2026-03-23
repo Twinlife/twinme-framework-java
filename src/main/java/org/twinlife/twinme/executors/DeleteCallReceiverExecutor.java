@@ -1,9 +1,10 @@
 /*
- *  Copyright (c) 2023-2024 twinlife SA.
+ *  Copyright (c) 2023-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
  *   Romain Kolb (romain.kolb@skyrock.com)
+ *   Stephane Carrez (Stephane.Carrez@twin.life)
  */
 
 package org.twinlife.twinme.executors;
@@ -14,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
 import org.twinlife.twinme.TwinmeContextImpl;
@@ -25,7 +27,7 @@ import java.util.UUID;
 // All observers are running in the SingleThreadExecutor provided by the twinlife library
 // All observers are reachable (not eligible for garbage collection) between start() and stop() calls
 //
-// version: 1.3
+// version: 1.4
 //
 // User foreground operation: must be connected with a timeout if connection does not work.
 // BUT, when it is called from DeleteSpace, the timeout is set to infinity.
@@ -38,8 +40,10 @@ public class DeleteCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
     private static final int DELETE_TWINCODE_DONE = 1 << 1;
     private static final int DELETE_IDENTITY_IMAGE = 1 << 2;
     private static final int DELETE_IDENTITY_IMAGE_DONE = 1 << 3;
-    private static final int DELETE_OBJECT = 1 << 4;
-    private static final int DELETE_OBJECT_DONE = 1 << 5;
+    private static final int DELETE_ORGANIZER_IMAGE = 1 << 4;
+    private static final int DELETE_ORGANIZER_IMAGE_DONE = 1 << 5;
+    private static final int DELETE_OBJECT = 1 << 6;
+    private static final int DELETE_OBJECT_DONE = 1 << 7;
 
     @NonNull
     private final CallReceiver mCallReceiver;
@@ -47,8 +51,13 @@ public class DeleteCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
     private final UUID mTwincodeFactoryId;
     @Nullable
     private final ImageId mAvatarId;
+    @Nullable
+    private final ImageId mOrganizerAvatarId;
 
-    public DeleteCallReceiverExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull CallReceiver callReceiver) {
+    @Nullable
+    private final Consumer<UUID> mConsumer;
+
+    public DeleteCallReceiverExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull CallReceiver callReceiver, @Nullable Consumer<UUID> consumer) {
         super(twinmeContextImpl, requestId, LOG_TAG, DEFAULT_TIMEOUT);
         if (DEBUG) {
             Log.d(LOG_TAG, "DeleteContactExecutor: twinmeContextImpl=" + twinmeContextImpl + " requestId=" + requestId + " callReceiver=" + callReceiver);
@@ -57,6 +66,8 @@ public class DeleteCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
         mCallReceiver = callReceiver;
         mTwincodeFactoryId = callReceiver.getTwincodeFactoryId();
         mAvatarId = callReceiver.getAvatarId();
+        mOrganizerAvatarId = callReceiver.getIdentityAvatarId();
+        mConsumer = consumer;
     }
 
     @Override
@@ -71,6 +82,9 @@ public class DeleteCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
             }
             if ((mState & DELETE_IDENTITY_IMAGE) != 0 && (mState & DELETE_IDENTITY_IMAGE_DONE) == 0) {
                 mState &= ~DELETE_IDENTITY_IMAGE;
+            }
+            if ((mState & DELETE_ORGANIZER_IMAGE) != 0 && (mState & DELETE_ORGANIZER_IMAGE_DONE) == 0) {
+                mState &= ~DELETE_ORGANIZER_IMAGE;
             }
         }
         super.onTwinlifeOnline();
@@ -122,12 +136,43 @@ public class DeleteCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
                 }
                 ImageService imageService = mTwinmeContextImpl.getImageService();
                 imageService.deleteImage(mAvatarId, (ErrorCode status, ImageId imageId) -> {
+                    if (status != ErrorCode.SUCCESS) {
+                        onOperationError(DELETE_IDENTITY_IMAGE, status, null);
+                        return;
+                    }
                     mState |= DELETE_IDENTITY_IMAGE_DONE;
                     onOperation();
                 });
                 return;
             }
             if ((mState & DELETE_IDENTITY_IMAGE_DONE) == 0) {
+                return;
+            }
+        }
+
+        //
+        // Step 2: delete the organizer avatarId
+        //
+        if (mOrganizerAvatarId != null) {
+
+            if ((mState & DELETE_ORGANIZER_IMAGE) == 0) {
+                mState |= DELETE_ORGANIZER_IMAGE;
+
+                if (DEBUG) {
+                    Log.d(LOG_TAG, "ImageService.deleteImage: imageId=" + mAvatarId);
+                }
+                ImageService imageService = mTwinmeContextImpl.getImageService();
+                imageService.deleteImage(mOrganizerAvatarId, (ErrorCode status, ImageId imageId) -> {
+                    if (status != ErrorCode.SUCCESS) {
+                        onOperationError(DELETE_IDENTITY_IMAGE, status, null);
+                        return;
+                    }
+                    mState |= DELETE_ORGANIZER_IMAGE_DONE;
+                    onOperation();
+                });
+                return;
+            }
+            if ((mState & DELETE_ORGANIZER_IMAGE_DONE) == 0) {
                 return;
             }
         }
@@ -150,6 +195,10 @@ public class DeleteCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
 
 
         mTwinmeContextImpl.onDeleteCallReceiver(mRequestId, mCallReceiver.getId());
+
+        if (mConsumer != null) {
+            mConsumer.onGet(ErrorCode.SUCCESS, mCallReceiver.getId());
+        }
 
         stop();
     }
@@ -195,7 +244,7 @@ public class DeleteCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
         }
 
         // The delete operation succeeds if we get an item not found error.
-        if (errorCode == ErrorCode.ITEM_NOT_FOUND) {
+        if (errorCode == ErrorCode.ITEM_NOT_FOUND | errorCode == ErrorCode.EXPIRED) {
             switch (operationId) {
                 case DELETE_TWINCODE:
                     mState |= DELETE_TWINCODE_DONE;
@@ -213,5 +262,9 @@ public class DeleteCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
         }
 
         super.onOperationError(operationId, errorCode, errorParameter);
+
+        if (errorCode != ErrorCode.TWINLIFE_OFFLINE && mConsumer != null) {
+            mConsumer.onGet(errorCode, null);
+        }
     }
 }

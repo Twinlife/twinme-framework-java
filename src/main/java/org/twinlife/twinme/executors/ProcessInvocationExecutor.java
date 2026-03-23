@@ -240,7 +240,7 @@ public class ProcessInvocationExecutor extends AbstractTwinmeExecutor {
                 invocation = null;
             }
         } else if (mGroupSubscribeAction) {
-            if (mReceiver instanceof Invitation) {
+            if (mReceiver instanceof Invitation && mPeerTwincodeOutbound != null) {
                 errorCode = ErrorCode.SUCCESS;
                 invocation = new GroupSubscribeInvocation(mInvocation.invocationId, mReceiver, mPeerTwincodeOutbound);
             } else {
@@ -283,7 +283,7 @@ public class ProcessInvocationExecutor extends AbstractTwinmeExecutor {
             mRestarted = true;
             return;
 
-        } else if (errorCode == ErrorCode.ITEM_NOT_FOUND) {
+        } else if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) {
             // The receiver was found for this invocation but the twincode associated with the invocation
             // is now obsolete: this invocation has expired.
             mConsumer.onGet(ErrorCode.EXPIRED, null);

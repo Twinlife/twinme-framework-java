@@ -27,6 +27,7 @@ import org.twinlife.twinlife.Notification;
 import org.twinlife.twinlife.Offer;
 import org.twinlife.twinlife.TwincodeOutbound;
 import org.twinlife.twinme.calls.CallStatus;
+import org.twinlife.twinme.models.CallReceiver;
 import org.twinlife.twinme.models.Originator;
 import org.twinlife.twinme.models.AccountMigration;
 
@@ -47,6 +48,7 @@ public interface NotificationCenter {
     int CALL_SERVICE_INCALL_NOTIFICATION_ID = 5;
     int EXPORT_NOTIFICATION_ID = 6;
     int MESSAGE_SUMMARY_NOTIFICATION_ID = 7;
+    int BACKUP_NOTIFICATION_ID = 8;
 
     void onIncomingCall(@NonNull Originator contact, @Nullable Bitmap avatar, @NonNull UUID peerConnectionId, @NonNull Offer offer);
 
@@ -72,6 +74,8 @@ public interface NotificationCenter {
     void onUnbindContact(@NonNull Originator contact);
 
     void onUpdateContact(@NonNull Originator contact, @NonNull List<AttributeNameValue> previousAttributes);
+
+    void onConferenceEvent(@NonNull CallReceiver conference, @NonNull ConferenceEvent type, long date);
 
     void updateApplicationBadgeNumber(int applicationBadgeNumber);
 
@@ -113,6 +117,8 @@ public interface NotificationCenter {
     int startMigrationService(@NonNull Service service, boolean fullScreenActivity);
 
     void setDynamicShortcuts(@Nullable Map<Conversation, Descriptor> descriptors);
+
+    int startBackupService(@NonNull Service service, int progress);
 
     void pushDynamicShortcut(@NonNull Originator originator, boolean incoming);
 

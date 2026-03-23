@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2018-2021 twinlife SA.
+ *  Copyright (c) 2018-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -16,6 +16,7 @@ import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.ConversationService.DescriptorId;
 import org.twinlife.twinlife.DatabaseIdentifier;
 import org.twinlife.twinlife.ImageId;
+import org.twinlife.twinme.TwinmeContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -194,6 +195,24 @@ public class InvitedGroupMember implements Originator {
     public List<BaseService.AttributeNameValue> getAttributes(boolean exportAll) {
 
         return new ArrayList<>();
+    }
+
+    @NonNull
+    public String getString(@NonNull String name, @NonNull String defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
+    public long getLong(@NonNull String name, long defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
+    public boolean getBoolean(@NonNull String name, boolean defaultValue) {
+        return defaultValue;
+    }
+
+    public void putString(@NonNull String name, @NonNull String value, @NonNull TwinmeContext twinmeContext) {
     }
 
     //

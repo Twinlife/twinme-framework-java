@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2020-2023 twinlife SA.
+ *  Copyright (c) 2020-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -11,69 +11,29 @@ package org.twinlife.twinme.models;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.twinlife.twinlife.util.Utils;
-
 import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 /**
  * Twinme Settings
  *
  */
-public class Settings {
-    @Nullable
-    protected String mDescription;
-    @Nullable
-    protected Map<String, String> mProperties;
+public class Settings extends BaseSettings {
 
     public Settings() {
-
-        mDescription = null;
-        mProperties = null;
     }
 
     public Settings(@NonNull String description) {
-
-        mDescription = description;
-        mProperties = null;
+        super(description);
     }
 
     public Settings(@NonNull Settings from) {
-
-        mDescription = from.mDescription;
-        if (from.mProperties != null) {
-            mProperties = new HashMap<>(from.mProperties);
-        } else {
-            mProperties = null;
-        }
-    }
-
-    @NonNull
-    public String getDescription() {
-
-        return mDescription != null ? mDescription : "";
+        super(from);
     }
 
     public void setDescription(String description) {
 
         mDescription = description;
-    }
-
-    public boolean getBoolean(@NonNull String name, boolean defaultValue) {
-
-        if (mProperties == null) {
-
-            return defaultValue;
-        }
-
-        String value = mProperties.get(name);
-        if (value == null) {
-
-            return defaultValue;
-        }
-
-        return "1".equals(value);
     }
 
     public void setBoolean(@NonNull String name, boolean value) {
@@ -83,23 +43,6 @@ public class Settings {
         }
 
         mProperties.put(name, value ? "1" : "0");
-    }
-
-    @NonNull
-    public String getString(@NonNull String name, @NonNull String defaultValue) {
-
-        if (mProperties == null) {
-
-            return defaultValue;
-        }
-
-        String value = mProperties.get(name);
-        if (value == null) {
-
-            return defaultValue;
-        }
-
-        return value;
     }
 
     public void setString(@NonNull String name, @Nullable String value) {
@@ -119,23 +62,6 @@ public class Settings {
         }
     }
 
-    @Nullable
-    public UUID getUUID(@NonNull String name) {
-
-        if (mProperties == null) {
-
-            return null;
-        }
-
-        String value = mProperties.get(name);
-        if (value == null) {
-
-            return null;
-        }
-
-        return Utils.UUIDFromString(value);
-    }
-
     public void setUUID(@NonNull String name, @NonNull UUID value) {
 
         if (mProperties == null) {
@@ -143,27 +69,6 @@ public class Settings {
         }
 
         mProperties.put(name, value.toString());
-    }
-
-    public int getColor(@NonNull String name, int defaultValue) {
-
-        if (mProperties == null) {
-
-            return defaultValue;
-        }
-
-        String value = mProperties.get(name);
-        if (value == null) {
-
-            return defaultValue;
-        }
-
-        try {
-            return Integer.parseInt(value, 16) | 0xFF000000;
-
-        } catch (IllegalArgumentException exception) {
-            return defaultValue;
-        }
     }
 
     public void setColor(@NonNull String name, int value) {

@@ -15,6 +15,7 @@ import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.RepositoryObject;
@@ -56,7 +57,10 @@ public class ChangeCallReceiverTwincodeExecutor extends AbstractTimeoutTwinmeExe
     @Nullable
     private final ExportedImageId mAvatarId;
 
-    public ChangeCallReceiverTwincodeExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull CallReceiver callReceiver) {
+    @Nullable
+    private final Consumer<CallReceiver> mConsumer;
+
+    public ChangeCallReceiverTwincodeExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull CallReceiver callReceiver, @Nullable Consumer<CallReceiver> consumer) {
         super(twinmeContextImpl, requestId, LOG_TAG, DEFAULT_TIMEOUT);
         if (DEBUG) {
             Log.d(LOG_TAG, "ChangeCallReceiverTwincodeExecutor: twinmeContextImpl=" + twinmeContextImpl + " requestId=" + requestId
@@ -71,6 +75,8 @@ public class ChangeCallReceiverTwincodeExecutor extends AbstractTimeoutTwinmeExe
         } else {
             mAvatarId = null;
         }
+
+        mConsumer = consumer;
     }
 
     @Override
@@ -193,6 +199,10 @@ public class ChangeCallReceiverTwincodeExecutor extends AbstractTimeoutTwinmeExe
 
         mTwinmeContextImpl.onChangeCallReceiverTwincode(mRequestId, mCallReceiver);
 
+        if (mConsumer != null) {
+            mConsumer.onGet(ErrorCode.SUCCESS, mCallReceiver);
+        }
+
         stop();
     }
 
@@ -254,11 +264,15 @@ public class ChangeCallReceiverTwincodeExecutor extends AbstractTimeoutTwinmeExe
         }
 
         // The delete operation succeeds if we get an item not found error.
-        if (errorCode == ErrorCode.ITEM_NOT_FOUND && (operationId == DELETE_TWINCODE)) {
+        if ((errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) && (operationId == DELETE_TWINCODE)) {
             mState |= DELETE_TWINCODE_DONE;
             return;
         }
 
         super.onOperationError(operationId, errorCode, errorParameter);
+
+        if (errorCode != ErrorCode.TWINLIFE_OFFLINE && mConsumer != null) {
+            mConsumer.onGet(errorCode, null);
+        }
     }
 }

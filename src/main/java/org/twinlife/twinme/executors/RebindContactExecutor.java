@@ -202,7 +202,7 @@ public class RebindContactExecutor extends AbstractConnectedTwinmeExecutor {
         }
 
         if (operationId == INVOKE_TWINCODE_OUTBOUND) {
-            if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.NO_PRIVATE_KEY
+            if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED || errorCode == ErrorCode.NO_PRIVATE_KEY
                     || errorCode == ErrorCode.INVALID_PUBLIC_KEY || errorCode == ErrorCode.INVALID_PRIVATE_KEY) {
 
                 mState |= INVOKE_TWINCODE_OUTBOUND_DONE;

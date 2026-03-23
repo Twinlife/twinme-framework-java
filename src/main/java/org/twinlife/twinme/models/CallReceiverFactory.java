@@ -1,22 +1,29 @@
 /*
- *  Copyright (c) 2023-2024 twinlife SA.
+ *  Copyright (c) 2023-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
  *   Stephane Carrez (Stephane.Carrez@twin.life)
+ *   Romain Kolb (romain.kolb@skyrock.com)
  */
 
 package org.twinlife.twinme.models;
+
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
+import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.DatabaseIdentifier;
 import org.twinlife.twinlife.RepositoryImportService;
+import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryObjectFactory;
+import org.twinlife.twinlife.TwinlifeContext;
 import org.twinlife.twinlife.util.Utils;
+import org.twinlife.twinme.TwinmeContext;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +32,8 @@ import java.util.UUID;
  * Factory used by the RepositoryService to create Contact object.
  */
 public class CallReceiverFactory extends TwinmeObjectFactory implements RepositoryObjectFactory<CallReceiver> {
+    private static final boolean DEBUG = false;
+    private static final String LOG_TAG = "CallReceiverFactory";
 
     public static final CallReceiverFactory INSTANCE = new CallReceiverFactory();
 
@@ -103,6 +112,64 @@ public class CallReceiverFactory extends TwinmeObjectFactory implements Reposito
         final CallReceiver contact = new CallReceiver(identifier, uuid, creationDate, name, description, attributes, creationDate);
         upgradeService.importObject(contact, twincodeFactoryId, twincodeInboundId, twincodeOutboundId, privatePeerTwincodeOutboundId, spaceId);
         return contact;
+    }
+
+    @Override
+    public void syncObject(@NonNull TwinlifeContext twinlifeContext, @NonNull RepositoryObject callReceiver, @NonNull Consumer<RepositoryObject> consumer) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "syncObject: twinlifeContext=" + twinlifeContext + " callReceiver=" + callReceiver + " consumer=" + consumer);
+        }
+
+        if (!(callReceiver instanceof CallReceiver)) {
+            Log.e(LOG_TAG, "object is not a call receiver: " + callReceiver);
+            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, callReceiver);
+            return;
+        }
+
+        if (!(twinlifeContext instanceof TwinmeContext)) {
+            Log.e(LOG_TAG, "twinlifeContext is not a TwinmeContext: "+twinlifeContext);
+            consumer.onGet(BaseService.ErrorCode.LIBRARY_ERROR, callReceiver);
+            return;
+        }
+
+        TwinmeContext twinmeContext = (TwinmeContext) twinlifeContext;
+
+        if (callReceiver.getTwincodeOutbound() == null) {
+            Log.e(LOG_TAG, "CallReceiver has no twincodeOutbound, creating new one: " + callReceiver);
+            twinmeContext.changeCallReceiverTwincode(BaseService.DEFAULT_REQUEST_ID, (CallReceiver) callReceiver, (errorCode, updatedCallReceiver) -> consumer.onGet(errorCode, callReceiver));
+            return;
+        }
+
+        twinmeContext.getTwincodeOutboundService().updateTwincode(callReceiver.getTwincodeOutbound(), callReceiver.getTwincodeOutbound().getAttributes(), null, (errorCode, twincode) -> {
+            if (errorCode == BaseService.ErrorCode.ITEM_NOT_FOUND || errorCode == BaseService.ErrorCode.EXPIRED) {
+                twinmeContext.changeCallReceiverTwincode(BaseService.DEFAULT_REQUEST_ID, (CallReceiver) callReceiver, (err, updatedCallReceiver) -> consumer.onGet(err, callReceiver));
+                return;
+            } else if (errorCode != BaseService.ErrorCode.SUCCESS) {
+                Log.e(LOG_TAG, "Error invoking twincode: " + errorCode + " for call receiver " + callReceiver);
+            } else if (DEBUG) {
+                Log.d(LOG_TAG, "Successfully updated twincode for call receiver " + callReceiver);
+            }
+            consumer.onGet(errorCode, callReceiver);
+        });
+    }
+
+    @Override
+    public void deleteObject(@NonNull TwinlifeContext twinlifeContext, @NonNull RepositoryObject callReceiver, @NonNull Consumer<RepositoryObject> consumer) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "deleteObject: twinlifeContext=" + twinlifeContext + " callReceiver=" + callReceiver + " consumer=" + consumer);
+        }
+
+        if (!(callReceiver instanceof CallReceiver)) {
+            Log.e(LOG_TAG, "object is not a call receiver: " + callReceiver);
+            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, callReceiver);
+            return;
+        }
+
+        if (!(twinlifeContext instanceof TwinmeContext)) {
+            consumer.onGet(BaseService.ErrorCode.LIBRARY_ERROR, null);
+        } else {
+            ((TwinmeContext) twinlifeContext).deleteCallReceiver(1L, (CallReceiver) callReceiver, (errorCode, uuid) -> consumer.onGet(errorCode, callReceiver));
+        }
     }
 
     private CallReceiverFactory() {

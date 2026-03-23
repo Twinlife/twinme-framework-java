@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2022 twinlife SA.
+ *  Copyright (c) 2022-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -27,6 +27,7 @@ import androidx.annotation.Nullable;
  *
  */
 public enum CallStatus {
+    CALL_WAITING,            // The conference call is waiting for participants and the conference to start.
     INCOMING_CALL,
     INCOMING_VIDEO_CALL,
     INCOMING_VIDEO_BELL,     // Incoming video bell and we are receiving the video track.
@@ -48,6 +49,7 @@ public enum CallStatus {
     CallStatus toActive() {
 
         switch (this) {
+            case CALL_WAITING:
             case INCOMING_CALL:
             case ACCEPTED_INCOMING_CALL:
             case OUTGOING_CALL:
@@ -75,6 +77,7 @@ public enum CallStatus {
             case ACCEPTED_INCOMING_CALL:
                 return ACCEPTED_INCOMING_CALL;
 
+            case CALL_WAITING:
             case OUTGOING_CALL:
             case ACCEPTED_OUTGOING_CALL:
                 return ACCEPTED_OUTGOING_CALL;
@@ -134,7 +137,7 @@ public enum CallStatus {
 
     public static boolean isOutgoing(@Nullable CallStatus mode) {
 
-        return mode == OUTGOING_CALL || mode == OUTGOING_VIDEO_CALL || mode == OUTGOING_VIDEO_BELL;
+        return mode == CALL_WAITING || mode == OUTGOING_CALL || mode == OUTGOING_VIDEO_CALL || mode == OUTGOING_VIDEO_BELL;
     }
 
     public static boolean isActive(@Nullable CallStatus mode) {
@@ -152,9 +155,15 @@ public enum CallStatus {
         return mode == TERMINATED;
     }
 
+    public static boolean isWaiting(@Nullable CallStatus mode) {
+
+        return mode == CALL_WAITING;
+    }
+
     public boolean isVideo() {
 
         switch (this) {
+            case CALL_WAITING:
             case INCOMING_VIDEO_CALL:
             case INCOMING_VIDEO_BELL:
             case OUTGOING_VIDEO_BELL:

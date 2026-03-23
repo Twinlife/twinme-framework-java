@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2018-2024 twinlife SA.
+ *  Copyright (c) 2018-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -15,6 +15,7 @@ import androidx.annotation.Nullable;
 import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameStringValue;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
+import org.twinlife.twinlife.BaseService.AttributeNameListValue;
 import org.twinlife.twinlife.BuildConfig;
 import org.twinlife.twinlife.DatabaseIdentifier;
 import org.twinlife.twinlife.ImageId;
@@ -43,7 +44,7 @@ import java.util.UUID;
  *
  * The group name and avatar are initialized from the group twincode with the setGroupTwincodeOutbound
  * operation.  The current user identity is initialized from the member twincode with the
- * setMemberTwincodeOutbound.  The group key cannot be null and it is always associated with the non null
+ * setMemberTwincodeOutbound. The group key cannot be null, and it is always associated with the non-null
  * group member twincode.
  *
  */
@@ -101,6 +102,12 @@ public class Group extends TwinmeRepositoryObject implements Originator {
                             mGroupTwincodeFactoryId = Utils.UUIDFromString((String) (attribute).value);
                         }
                         break;
+
+                    case "properties":
+                        if (attribute instanceof AttributeNameListValue) {
+                            updateProperties((AttributeNameListValue) attribute);
+                        }
+                        break;
                 }
             }
         }
@@ -121,6 +128,7 @@ public class Group extends TwinmeRepositoryObject implements Originator {
         String name, description;
         Space space;
         boolean isLeaving;
+        BaseService.AttributeNameListValue settings;
         synchronized (this) {
             name = mName;
             description = mDescription;
@@ -130,6 +138,7 @@ public class Group extends TwinmeRepositoryObject implements Originator {
             groupTwincodeOutbound = mGroupTwincodeOutbound;
             groupTwincodeFactoryId = mGroupTwincodeFactoryId;
             isLeaving = mIsLeaving;
+            settings = export();
         }
 
         final List<AttributeNameValue> attributes = new ArrayList<>();
@@ -144,6 +153,9 @@ public class Group extends TwinmeRepositoryObject implements Originator {
         }
         if (isLeaving) {
             attributes.add(new BaseService.AttributeNameBooleanValue("leaving", Boolean.TRUE));
+        }
+        if (settings != null) {
+            attributes.add(settings);
         }
 
         return attributes;
@@ -221,7 +233,7 @@ public class Group extends TwinmeRepositoryObject implements Originator {
         return mGroupTwincodeOutbound == null ? null : mGroupTwincodeOutbound.getName();
     }
 
-    @NonNull
+    @Nullable
     public UUID getMemberTwincodeOutboundId() {
 
         return getTwincodeOutboundId();

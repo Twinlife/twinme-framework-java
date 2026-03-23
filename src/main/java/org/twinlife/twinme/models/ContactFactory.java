@@ -1,23 +1,33 @@
 /*
- *  Copyright (c) 2023 twinlife SA.
+ *  Copyright (c) 2023-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
  *   Stephane Carrez (Stephane.Carrez@twin.life)
+ *   Romain Kolb (romain.kolb@skyrock.com)
  */
 
 package org.twinlife.twinme.models;
+
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
+import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.DatabaseIdentifier;
 import org.twinlife.twinlife.RepositoryImportService;
+import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryObjectFactory;
+import org.twinlife.twinlife.TwincodeOutboundService;
+import org.twinlife.twinlife.TwinlifeContext;
+import org.twinlife.twinlife.conversation.ConversationProtocol;
 import org.twinlife.twinlife.util.Utils;
+import org.twinlife.twinme.TwinmeContext;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +35,8 @@ import java.util.UUID;
  * Factory used by the RepositoryService to create Contact object.
  */
 public class ContactFactory extends TwinmeObjectFactory implements RepositoryObjectFactory<Contact> {
+    private static final boolean DEBUG = false;
+    private static final String LOG_TAG = "ContactFactory";
 
     public static final ContactFactory INSTANCE = new ContactFactory();
 
@@ -69,37 +81,37 @@ public class ContactFactory extends TwinmeObjectFactory implements RepositoryObj
 
                 case "privatePeerTwincodeOutboundId":
                     if (attribute instanceof BaseService.AttributeNameStringValue) {
-                        privatePeerTwincodeOutboundId = Utils.UUIDFromString((String) ((BaseService.AttributeNameStringValue) attribute).value);
+                        privatePeerTwincodeOutboundId = Utils.UUIDFromString((String) attribute.value);
                     }
                     break;
 
                 case "publicPeerTwincodeOutboundId":
                     if (attribute instanceof BaseService.AttributeNameStringValue) {
-                        publicPeerTwincodeOutboundId = Utils.UUIDFromString((String) ((BaseService.AttributeNameStringValue) attribute).value);
+                        publicPeerTwincodeOutboundId = Utils.UUIDFromString((String) attribute.value);
                     }
                     break;
 
                 case "spaceId":
                     if (attribute instanceof BaseService.AttributeNameStringValue) {
-                        spaceId = Utils.UUIDFromString((String) ((BaseService.AttributeNameStringValue) attribute).value);
+                        spaceId = Utils.UUIDFromString((String) attribute.value);
                     }
                     break;
 
                 case "twincodeInboundId":
                     if (attribute instanceof BaseService.AttributeNameStringValue) {
-                        twincodeInboundId = Utils.UUIDFromString((String) ((BaseService.AttributeNameStringValue) attribute).value);
+                        twincodeInboundId = Utils.UUIDFromString((String) attribute.value);
                     }
                     break;
 
                 case "twincodeOutboundId":
                     if (attribute instanceof BaseService.AttributeNameStringValue) {
-                        twincodeOutboundId = Utils.UUIDFromString((String) ((BaseService.AttributeNameStringValue) attribute).value);
+                        twincodeOutboundId = Utils.UUIDFromString((String) attribute.value);
                     }
                     break;
 
                 case "twincodeFactoryId":
                     if (attribute instanceof BaseService.AttributeNameStringValue) {
-                        twincodeFactoryId = Utils.UUIDFromString((String) ((BaseService.AttributeNameStringValue) attribute).value);
+                        twincodeFactoryId = Utils.UUIDFromString((String) attribute.value);
                     }
                     break;
             }
@@ -116,6 +128,82 @@ public class ContactFactory extends TwinmeObjectFactory implements RepositoryObj
         final Contact contact = new Contact(identifier, uuid, creationDate, name, description, attributes, creationDate);
         upgradeService.importObject(contact, twincodeFactoryId, twincodeInboundId, twincodeOutboundId, privatePeerTwincodeOutboundId, spaceId);
         return contact;
+    }
+
+    @Override
+    public void syncObject(@NonNull TwinlifeContext twinlifeContext, @NonNull RepositoryObject contact, @NonNull Consumer<RepositoryObject> consumer) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "syncObject: twinlifeContext=" + twinlifeContext + " contact=" + contact + " consumer=" + consumer);
+        }
+
+        if (!(contact instanceof Contact)) {
+            Log.e(LOG_TAG, "object is not a contact: " + contact);
+            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, contact);
+            return;
+        }
+
+        if (contact.getTwincodeOutbound() == null) {
+            Log.e(LOG_TAG, "Contact has no twincodeOutbound: " + contact);
+            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, contact);
+            return;
+        }
+
+        if (contact.getPeerTwincodeOutbound() == null) {
+            Log.w(LOG_TAG, "Contact has no peer twincodeOutbound: " + contact + ", either creation phase 2 wasn't performed before backup or the relation was revoked by the peer");
+            // Return SUCCESS as this is most likely a false positive.
+            consumer.onGet(BaseService.ErrorCode.SUCCESS, contact);
+            return;
+        }
+
+        twinlifeContext.getTwincodeOutboundService().updateTwincode(contact.getTwincodeOutbound(), contact.getTwincodeOutbound().getAttributes(), null, (status, twincode) -> {
+            if (status == BaseService.ErrorCode.ITEM_NOT_FOUND || status == BaseService.ErrorCode.EXPIRED) {
+                Log.e(LOG_TAG, "Contact's Twincode not found, deleting from local database : " + contact);
+
+                if (twinlifeContext instanceof TwinmeContext) {
+                    ((TwinmeContext) twinlifeContext).deleteContact(1L, ((Contact) contact));
+                    consumer.onGet(BaseService.ErrorCode.ITEM_NOT_FOUND, contact);
+                }
+                return;
+            } else if (status != BaseService.ErrorCode.SUCCESS) {
+                Log.e(LOG_TAG, "Error updating twincode: " + status + " for contact " + contact);
+                consumer.onGet(status, contact);
+                return;
+            }
+
+            if (contact.getTwincodeOutbound().isEncrypted()) {
+                twinlifeContext.getTwincodeOutboundService().invokeTwincode(contact.getPeerTwincodeOutbound(), TwincodeOutboundService.INVOKE_WAKEUP,
+                        ConversationProtocol.ACTION_CONVERSATION_NEED_SECRET, new ArrayList<>(), (errorCode, invocationId) -> {
+                            if (errorCode != BaseService.ErrorCode.SUCCESS) {
+                                Log.e(LOG_TAG, "Error invoking twincode: " + errorCode + " for contact " + contact);
+                            } else if (DEBUG) {
+                                Log.d(LOG_TAG, "Successfully invoked twincode for contact " + contact);
+                            }
+                            consumer.onGet(errorCode, contact);
+                        });
+                return;
+            }
+
+            consumer.onGet(BaseService.ErrorCode.SUCCESS, contact);
+        });
+    }
+
+    @Override
+    public void deleteObject(@NonNull TwinlifeContext twinlifeContext, @NonNull RepositoryObject contact, @NonNull Consumer<RepositoryObject> consumer) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "deleteObject: twinlifeContext=" + twinlifeContext + " contact=" + contact + " consumer=" + consumer);
+        }
+
+        if (!(contact instanceof Contact)) {
+            Log.e(LOG_TAG, "object is not a contact: " + contact);
+            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, contact);
+            return;
+        }
+
+        if (twinlifeContext instanceof TwinmeContext) {
+            ((TwinmeContext) twinlifeContext).deleteContact(-1L, (Contact) contact);
+        }
+
+        consumer.onGet(BaseService.ErrorCode.SUCCESS, contact);
     }
 
     private ContactFactory() {

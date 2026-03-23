@@ -507,14 +507,14 @@ public class CreateSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
             Log.d(LOG_TAG, "onError: operationId=" + operationId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
         }
 
-        if (operationId == GET_INVITATION_TWINCODE && errorCode == ErrorCode.ITEM_NOT_FOUND) {
+        if (operationId == GET_INVITATION_TWINCODE && (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED)) {
             mInvitations.remove(0);
             mState &= ~GET_INVITATION_TWINCODE;
             mInvitationTwincodeOutboundId = null;
             onOperation();
             return;
         }
-        if (operationId == CREATE_GROUP && errorCode == ErrorCode.ITEM_NOT_FOUND) {
+        if (operationId == CREATE_GROUP && (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED)) {
             mInvitations.remove(0);
             mState &= ~(CREATE_GROUP | GET_INVITATION_TWINCODE | GET_INVITATION_TWINCODE_DONE);
             mInvitationTwincodeOutbound = null;

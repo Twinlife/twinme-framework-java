@@ -357,7 +357,7 @@ public class BindContactExecutor extends AbstractConnectedTwinmeExecutor {
             return;
         }
 
-        if (operationId == INVOKE_TWINCODE_OUTBOUND && errorCode == ErrorCode.ITEM_NOT_FOUND) {
+        if (operationId == INVOKE_TWINCODE_OUTBOUND && (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED)) {
             mTwinmeContextImpl.unbindContact(mRequestId, mInvocation == null ? null : mInvocation.getId(), mContact);
             mInvocation = null;
         }

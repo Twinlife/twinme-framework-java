@@ -37,7 +37,16 @@ public enum ToggleableCap {
      * When enabled, strictly do not allow the peer to take control of the zoom during a video call.
      * ZOOMABLE and NOT_ZOOMABLE are used to build the Zoomable enum value.
      */
-    NOT_ZOOMABLE("not-zoomable", 1 << 16, false);
+    NOT_ZOOMABLE("not-zoomable", 1 << 16, false),
+
+    /**
+     * When enabled, instruct the webapp to notify the creator when the first member joins the conference.
+     */
+    NOTIFY_JOIN("notify-join", 1 << 17, false),
+
+    AUTO_DELETE("auto-delete", 1 << 18, false),
+
+    PERIODIC("periodic", 1 << 19, false);
 
     /**
      * Name of the capability.

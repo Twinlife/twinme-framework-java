@@ -1,9 +1,10 @@
 /*
- *  Copyright (c) 2019-2023 twinlife SA.
+ *  Copyright (c) 2019-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
  *   Stephane Carrez (Stephane.Carrez@twin.life)
+ *   Romain Kolb (romain.kolb@skyrock.com)
  */
 
 package org.twinlife.twinme.models;
@@ -231,7 +232,7 @@ public class Space extends TwinmeRepositoryObject {
     @Override
     public String getDescription() {
 
-        return mSpaceTwincode != null ? mSpaceTwincode.getDescription() : mSpaceSettings.getDescription();
+        return mSpaceTwincode != null && mSpaceTwincode.getDescription() != null ? mSpaceTwincode.getDescription() : mSpaceSettings.getDescription();
     }
 
     @Override

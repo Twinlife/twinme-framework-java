@@ -277,7 +277,7 @@ public class CreateAccountMigrationExecutor extends AbstractConnectedTwinmeExecu
             Log.d(LOG_TAG, "onUpdateTwincodeOutbound: errorCode=" + errorCode + " twincodeOutbound=" + twincodeOutbound);
         }
 
-        if (errorCode == ErrorCode.ITEM_NOT_FOUND && mAccountMigration != null) {
+        if ((errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) && mAccountMigration != null) {
             // It can happen that the twincode has been deleted but we still have the AccountMigration object.
             // This occurs during a successful migration because we are sending the database to the peer and
             // once the migration is done, we delete and unbind the twincode on the first device.  When we start

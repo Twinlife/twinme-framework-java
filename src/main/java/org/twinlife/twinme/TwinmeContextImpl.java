@@ -32,7 +32,6 @@ import org.twinlife.twinlife.ConversationService.DescriptorId;
 import org.twinlife.twinlife.ConversationService.GroupConversation;
 import org.twinlife.twinlife.ConversationService.UpdateType;
 import org.twinlife.twinlife.DisplayCallsMode;
-import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.Filter;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
@@ -50,28 +49,21 @@ import org.twinlife.twinlife.TerminateReason;
 import org.twinlife.twinlife.RepositoryService;
 import org.twinlife.twinlife.RepositoryService.StatType;
 import org.twinlife.twinlife.TrustMethod;
-import org.twinlife.twinlife.Twincode;
-import org.twinlife.twinlife.TwincodeInboundService;
-import org.twinlife.twinlife.TwincodeInvocation;
-import org.twinlife.twinlife.TwincodeOutboundService;
 import org.twinlife.twinlife.TwincodeOutbound;
 import org.twinlife.twinlife.TwincodeURI;
 import org.twinlife.twinlife.TwinlifeContext;
 import org.twinlife.twinlife.TwinlifeContextImpl;
 import org.twinlife.twinlife.TwinlifeImpl;
-import org.twinlife.twinlife.conversation.GroupProtocol;
 import org.twinlife.twinlife.util.BinaryDecoder;
 import org.twinlife.twinlife.util.EventMonitor;
 import org.twinlife.twinlife.util.Logger;
 import org.twinlife.twinlife.util.Utils;
 import org.twinlife.twinme.actions.TwinmeAction;
-import org.twinlife.twinme.executors.BindContactExecutor;
 import org.twinlife.twinme.executors.BindAccountMigrationExecutor;
 import org.twinlife.twinme.executors.ChangeCallReceiverTwincodeExecutor;
 import org.twinlife.twinme.executors.ChangeProfileTwincodeExecutor;
 import org.twinlife.twinme.executors.CreateCallReceiverExecutor;
 import org.twinlife.twinme.executors.CreateContactPhase1Executor;
-import org.twinlife.twinme.executors.CreateContactPhase2Executor;
 import org.twinlife.twinme.executors.CreateAccountMigrationExecutor;
 import org.twinlife.twinme.executors.CreateGroupExecutor;
 import org.twinlife.twinme.executors.CreateInvitationCodeExecutor;
@@ -92,18 +84,15 @@ import org.twinlife.twinme.executors.GetAccountMigrationExecutor;
 import org.twinlife.twinme.executors.GetGroupMemberExecutor;
 import org.twinlife.twinme.executors.GetInvitationCodeExecutor;
 import org.twinlife.twinme.executors.GetSpacesExecutor;
-import org.twinlife.twinme.executors.GroupRegisteredExecutor;
-import org.twinlife.twinme.executors.GroupSubscribeExecutor;
 import org.twinlife.twinme.executors.ListMembersExecutor;
-import org.twinlife.twinme.executors.ProcessInvocationExecutor;
 import org.twinlife.twinme.executors.RebindContactExecutor;
-import org.twinlife.twinme.executors.RefreshObjectExecutor;
 import org.twinlife.twinme.executors.ReportStatsExecutor;
 import org.twinlife.twinme.executors.UnbindContactExecutor;
 import org.twinlife.twinme.executors.UpdateCallReceiverExecutor;
 import org.twinlife.twinme.executors.UpdateContactAndIdentityExecutor;
 import org.twinlife.twinme.executors.UpdateGroupExecutor;
 import org.twinlife.twinme.executors.UpdateNotificationExecutor;
+import org.twinlife.twinme.executors.UpdateOrganizerExecutor;
 import org.twinlife.twinme.executors.UpdateProfileExecutor;
 import org.twinlife.twinme.executors.UpdateScoresExecutor;
 import org.twinlife.twinme.executors.UpdateSettingsExecutor;
@@ -119,18 +108,10 @@ import org.twinlife.twinme.models.AccountMigration;
 import org.twinlife.twinme.models.Group;
 import org.twinlife.twinme.models.GroupFactory;
 import org.twinlife.twinme.models.GroupMember;
-import org.twinlife.twinme.models.GroupRegisteredInvocation;
-import org.twinlife.twinme.models.GroupSubscribeInvocation;
 import org.twinlife.twinme.models.Invitation;
 import org.twinlife.twinme.models.InvitationFactory;
-import org.twinlife.twinme.models.Invocation;
 import org.twinlife.twinme.models.NotificationContent;
 import org.twinlife.twinme.models.Originator;
-import org.twinlife.twinme.models.PairBindInvocation;
-import org.twinlife.twinme.models.PairInviteInvocation;
-import org.twinlife.twinme.models.PairProtocol;
-import org.twinlife.twinme.models.PairRefreshInvocation;
-import org.twinlife.twinme.models.PairUnbindInvocation;
 import org.twinlife.twinme.models.Profile;
 import org.twinlife.twinme.models.ProfileFactory;
 import org.twinlife.twinme.models.RoomCommand;
@@ -238,32 +219,6 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         }
     }
 
-    private class TwincodeInboundServiceListener implements TwincodeInboundService.InvocationListener {
-
-        @Override
-        @Nullable
-        public ErrorCode onInvokeTwincode(@NonNull TwincodeInvocation invocation) {
-            if (DEBUG) {
-                Log.d(LOG_TAG, "TwincodeInboundServiceObserver.onInvokeTwincode: invocation=" + invocation);
-            }
-
-            return TwinmeContextImpl.this.onInvokeTwincodeInbound(invocation);
-        }
-    }
-
-    private class TwincodeOutboundServiceObserver implements TwincodeOutboundService.ServiceObserver {
-
-        @Override
-        public void onRefreshTwincode(@NonNull TwincodeOutbound twincodeOutbound,
-                                      @NonNull List<AttributeNameValue> previousAttributes) {
-            if (DEBUG) {
-                Log.d(LOG_TAG, "TwincodeOutboundServiceObserver.onRefreshTwincode: twincodeOutbound=" + twincodeOutbound);
-            }
-
-            TwinmeContextImpl.this.onRefreshTwincodeOutbound(twincodeOutbound, previousAttributes);
-        }
-    }
-
     private class PeerConnectionServiceObserver extends PeerConnectionService.DefaultServiceObserver {
 
         @Override
@@ -273,18 +228,6 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             }
 
             TwinmeContextImpl.this.onIncomingPeerConnection(peerConnectionId, peerId, offer);
-        }
-    }
-
-    private class RepositoryServiceObserver implements RepositoryService.ServiceObserver {
-
-        @Override
-        public void onInvalidObject(@NonNull RepositoryObject object) {
-            if (DEBUG) {
-                Log.d(LOG_TAG, "RepositoryServiceObserver.onInvalidObject: object=" + object);
-            }
-
-            TwinmeContextImpl.this.onInvalidObject(object);
         }
     }
 
@@ -325,10 +268,9 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
     private final ConversationServiceObserver mConversationServiceObserver;
     private final PeerConnectionServiceObserver mPeerConnectionServiceObserver;
-    private final TwincodeInboundServiceListener mTwincodeInboundServiceObserver;
-    private final TwincodeOutboundServiceObserver mTwincodeOutboundServiceObserver;
-    private final RepositoryServiceObserver mRepositoryServiceObserver;
     private final NotificationServiceObserver mNotificationServiceObserver;
+    private final RelationOrchestrator mRelationOrchestrator;
+    private final ConferenceOrchestrator mConferenceOrchestrator;
     private final boolean mEnableSpaces;
     private final TreeSet<TwinmeAction> mPendingActions;
     private TwinmeAction mFirstAction;
@@ -360,10 +302,9 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
         mConversationServiceObserver = new ConversationServiceObserver();
         mPeerConnectionServiceObserver = new PeerConnectionServiceObserver();
-        mTwincodeInboundServiceObserver = new TwincodeInboundServiceListener();
-        mTwincodeOutboundServiceObserver = new TwincodeOutboundServiceObserver();
-        mRepositoryServiceObserver = new RepositoryServiceObserver();
         mNotificationServiceObserver = new NotificationServiceObserver();
+        mRelationOrchestrator = new RelationOrchestrator(this, mTwinlifeExecutor);
+        mConferenceOrchestrator = new ConferenceOrchestrator(this, mTwinlifeExecutor);
 
         mPendingActions = new TreeSet<>();
 
@@ -813,24 +754,6 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         mTwinlifeExecutor.execute(createContactPhase1Executor::start);
     }
 
-    private void createContactPhase2(@NonNull PairInviteInvocation invocation, @NonNull Profile profile) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "createContactPhase2: invocation=" + invocation + " profile=" + profile);
-        }
-
-        CreateContactPhase2Executor createContactPhase2Executor = new CreateContactPhase2Executor(this, invocation, profile);
-        mTwinlifeExecutor.execute(createContactPhase2Executor::start);
-    }
-
-    private void createContactPhase2(@NonNull PairInviteInvocation invocation, @NonNull Invitation invitation) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "createContactPhase2: invocation=" + invocation + " invitation=" + invitation);
-        }
-
-        CreateContactPhase2Executor createContactPhase2Executor = new CreateContactPhase2Executor(this, invocation, invitation);
-        mTwinlifeExecutor.execute(createContactPhase2Executor::start);
-    }
-
     public void onCreateContact(long requestId, @NonNull Contact contact) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onCreateContact: requestId=" + requestId + " contact=" + contact);
@@ -888,15 +811,6 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         mTwinlifeExecutor.execute(updateContactAndIdentityExecutor::start);
     }
 
-    private void bindContact(@NonNull PairBindInvocation invocation, @NonNull Contact contact) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "bindContact: invocation=" + invocation + " contact=" + contact);
-        }
-
-        BindContactExecutor bindContactExecutor = new BindContactExecutor(this, invocation, contact);
-        mTwinlifeExecutor.execute(bindContactExecutor::start);
-    }
-
     @Override
     public void unbindContact(long requestId, @Nullable UUID invocationId, @NonNull Contact contact) {
         if (DEBUG) {
@@ -922,15 +836,6 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
         VerifyContactExecutor verifyContactExecutor = new VerifyContactExecutor(this, twincodeURI, trustMethod, complete);
         mTwinlifeExecutor.execute(verifyContactExecutor::start);
-    }
-
-    private void refreshRepositoryObject(@NonNull PairRefreshInvocation invocation, @NonNull Originator subject) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "refreshRepositoryObject: invocation=" + invocation + " subject=" + subject);
-        }
-
-        RefreshObjectExecutor refreshObjectExecutor = new RefreshObjectExecutor(this, invocation, subject);
-        mTwinlifeExecutor.execute(refreshObjectExecutor::start);
     }
 
     public void onUpdateContact(long requestId, @NonNull Contact contact) {
@@ -1034,7 +939,12 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             Log.d(LOG_TAG, "createInvitation: requestId=" + requestId + " contactGroupMember=" + contactGroupMember);
         }
 
-        CreateInvitationExecutor createInvitationExecutor = new CreateInvitationExecutor(this, requestId, mCurrentSpace, contactGroupMember);
+        final Space space = mCurrentSpace;
+        if (space == null) {
+            fireOnError(requestId, ErrorCode.BAD_REQUEST, null);
+            return;
+        }
+        CreateInvitationExecutor createInvitationExecutor = new CreateInvitationExecutor(this, requestId, space, contactGroupMember);
         mTwinlifeExecutor.execute(createInvitationExecutor::start);
     }
 
@@ -1044,7 +954,12 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             Log.d(LOG_TAG, "createInvitation: requestId=" + requestId + " group=" + group + " permissions=" + permissions);
         }
 
-        CreateInvitationExecutor createInvitationExecutor = new CreateInvitationExecutor(this, requestId, mCurrentSpace, group, permissions);
+        final Space space = mCurrentSpace;
+        if (space == null) {
+            fireOnError(requestId, ErrorCode.BAD_REQUEST, null);
+            return;
+        }
+        CreateInvitationExecutor createInvitationExecutor = new CreateInvitationExecutor(this, requestId, space, group, permissions);
         mTwinlifeExecutor.execute(createInvitationExecutor::start);
     }
 
@@ -1054,7 +969,12 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             Log.d(LOG_TAG, "createInvitation: requestId=" + requestId + " contact=" + contact + " sendTo=" + sendTo);
         }
 
-        CreateInvitationExecutor createInvitationExecutor = new CreateInvitationExecutor(this, requestId, mCurrentSpace, contact, sendTo);
+        final Space space = mCurrentSpace;
+        if (space == null) {
+            fireOnError(requestId, ErrorCode.BAD_REQUEST, null);
+            return;
+        }
+        CreateInvitationExecutor createInvitationExecutor = new CreateInvitationExecutor(this, requestId, space, contact, sendTo);
         mTwinlifeExecutor.execute(createInvitationExecutor::start);
     }
 
@@ -1418,7 +1338,12 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             Log.d(LOG_TAG, "createGroup: requestId=" + requestId + " name=" + name + " avatarFile=" + avatarFile );
         }
 
-        CreateGroupExecutor createGroupExecutor = new CreateGroupExecutor(this, requestId, mCurrentSpace,
+        final Space space = mCurrentSpace;
+        if (space == null) {
+            fireOnError(requestId, ErrorCode.BAD_REQUEST, null);
+            return;
+        }
+        CreateGroupExecutor createGroupExecutor = new CreateGroupExecutor(this, requestId, space,
                 name, description, avatar, avatarFile);
         mTwinlifeExecutor.execute(createGroupExecutor::start);
     }
@@ -1429,7 +1354,12 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             Log.d(LOG_TAG, "createGroup: requestId=" + requestId + " invitation=" + invitation);
         }
 
-        CreateGroupExecutor createGroupExecutor = new CreateGroupExecutor(this, requestId, mCurrentSpace, invitation);
+        final Space space = mCurrentSpace;
+        if (space == null) {
+            fireOnError(requestId, ErrorCode.BAD_REQUEST, null);
+            return;
+        }
+        CreateGroupExecutor createGroupExecutor = new CreateGroupExecutor(this, requestId, space, invitation);
         mTwinlifeExecutor.execute(createGroupExecutor::start);
     }
 
@@ -2294,7 +2224,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
     @Override
     public void toggleAnnotation(@NonNull DescriptorId descriptorId,
-                                 @NonNull ConversationService.AnnotationType type, int value) {
+                                 @NonNull ConversationService.AnnotationType type, long value) {
         if (DEBUG) {
             Log.d(LOG_TAG, "toggleAnnotation: descriptorId=" + descriptorId + " type=" + type + " value=" + value);
         }
@@ -2304,13 +2234,13 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
     @Override
     public void listAnnotations(@NonNull DescriptorId descriptorId,
-                                @NonNull ConsumerWithError<Map<TwincodeOutbound, DescriptorAnnotation>>consumer) {
+                                @NonNull ConsumerWithError<Map<TwincodeOutbound, List<DescriptorAnnotation>>>consumer) {
         if (DEBUG) {
             Log.d(LOG_TAG, "listAnnotations: descriptorId=" + descriptorId);
         }
 
         mTwinlifeExecutor.execute(() -> {
-            final Map<TwincodeOutbound, DescriptorAnnotation> annotations = getConversationService().listAnnotations(descriptorId);
+            final Map<TwincodeOutbound, List<DescriptorAnnotation>> annotations = getConversationService().listAnnotations(descriptorId);
             consumer.onGet(annotations == null ? ErrorCode.ITEM_NOT_FOUND : ErrorCode.SUCCESS, annotations);
         });
     }
@@ -2532,15 +2462,6 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         mTwinlifeExecutor.execute(bindAccountMigrationExecutor::start);
     }
 
-    private void bindAccountMigration(@NonNull PairInviteInvocation invocation, @NonNull AccountMigration accountMigration) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "bindAccountMigration: invocation=" + invocation + " deviceMigration=" + accountMigration);
-        }
-
-        BindAccountMigrationExecutor bindAccountMigrationExecutor = new BindAccountMigrationExecutor(this, invocation, accountMigration);
-        mTwinlifeExecutor.execute(bindAccountMigrationExecutor::start);
-    }
-
     @Override
     public void deleteAccountMigration(@NonNull AccountMigration accountMigration, @NonNull ConsumerWithError<UUID> consumer) {
         if (DEBUG) {
@@ -2588,13 +2509,12 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
     @Override
     public void createCallReceiver(long requestId, @NonNull Space space, @Nullable String name,
                                    @Nullable String description,
-                                   @Nullable String identityName, @Nullable String identityDescription,
                                    @Nullable Bitmap avatar, @Nullable File avatarFile, @Nullable Capabilities capabilities, @NonNull Consumer<CallReceiver> consumer) {
         if (DEBUG) {
             Log.d(LOG_TAG, "createCallReceiver: requestId=" + requestId + " space=" + space);
         }
 
-        CreateCallReceiverExecutor executor = new CreateCallReceiverExecutor(this, requestId, space, name, description, identityName, identityDescription, avatar, avatarFile, capabilities, consumer);
+        CreateCallReceiverExecutor executor = new CreateCallReceiverExecutor(this, requestId, space, name, description, avatar, avatarFile, capabilities, consumer);
         mTwinlifeExecutor.execute(executor::start);
     }
 
@@ -2651,11 +2571,16 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
     @Override
     public void deleteCallReceiver(long requestId, @NonNull CallReceiver callReceiver) {
+        deleteCallReceiver(requestId, callReceiver, null);
+    }
+
+        @Override
+    public void deleteCallReceiver(long requestId, @NonNull CallReceiver callReceiver, @Nullable ConsumerWithError<UUID> consumer) {
         if (DEBUG) {
             Log.d(LOG_TAG, "deleteCallReceiver: requestId=" + requestId + " callReceiver=" + callReceiver);
         }
 
-        DeleteCallReceiverExecutor executor = new DeleteCallReceiverExecutor(this, requestId, callReceiver);
+        DeleteCallReceiverExecutor executor = new DeleteCallReceiverExecutor(this, requestId, callReceiver, consumer);
         mTwinlifeExecutor.execute(executor::start);
     }
 
@@ -2675,16 +2600,27 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
     }
 
     @Override
-    public void updateCallReceiver(long requestId, @NonNull CallReceiver callReceiver, @NonNull String name, @Nullable String description, @NonNull String identityName,
-                                   @Nullable String identityDescription, @Nullable Bitmap identityAvatar, @Nullable File identityAvatarFile,
-                                   @Nullable Capabilities capabilities) {
+    public void updateCallReceiver(long requestId, @NonNull CallReceiver callReceiver, @NonNull String name, @Nullable String description,
+                                   @Nullable Bitmap avatar, @Nullable File avatarFile, @Nullable Capabilities capabilities) {
         if (DEBUG) {
-            Log.d(LOG_TAG, "updateCallReceiver: requestId=" + requestId + " identityName=" + identityName
-                    + " identityAvatarFile=" + identityAvatarFile + " description=" + description
+            Log.d(LOG_TAG, "updateCallReceiver: requestId=" + requestId + " name=" + name
+                    + " avatarFile=" + avatarFile + " description=" + description
                     + " capabilities=" + capabilities);
         }
 
-        UpdateCallReceiverExecutor executor = new UpdateCallReceiverExecutor(this, requestId, callReceiver, name, description, identityName, identityDescription, identityAvatar, identityAvatarFile, capabilities);
+        final UpdateCallReceiverExecutor executor = new UpdateCallReceiverExecutor(this, requestId, callReceiver, name, description, avatar, avatarFile, capabilities);
+        mTwinlifeExecutor.execute(executor::start);
+    }
+
+    @Override
+    public void updateOrganizer(long requestId, @NonNull CallReceiver callReceiver, @NonNull String identityName,
+                                @Nullable String identityDescription, @Nullable Bitmap identityAvatar, @Nullable File identityAvatarFile) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "updateOrganizer: requestId=" + requestId + " identityName=" + identityName
+                    + " identityAvatarFile=" + identityAvatarFile + " identityDescription=" + identityDescription);
+        }
+
+        final UpdateOrganizerExecutor executor = new UpdateOrganizerExecutor(this, requestId, callReceiver, identityName, identityDescription, identityAvatar, identityAvatarFile);
         mTwinlifeExecutor.execute(executor::start);
     }
 
@@ -2705,11 +2641,16 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
     @Override
     public void changeCallReceiverTwincode(long requestId, @NonNull CallReceiver callReceiver) {
+        changeCallReceiverTwincode(requestId, callReceiver, null);
+    }
+
+    @Override
+    public void changeCallReceiverTwincode(long requestId, @NonNull CallReceiver callReceiver, @Nullable ConsumerWithError<CallReceiver> consumer) {
         if (DEBUG) {
             Log.d(LOG_TAG, "changeProfileTwincode: requestId=" + requestId + " callReceiver=" + callReceiver);
         }
 
-        ChangeCallReceiverTwincodeExecutor executor = new ChangeCallReceiverTwincodeExecutor(this, requestId, callReceiver);
+        ChangeCallReceiverTwincodeExecutor executor = new ChangeCallReceiverTwincodeExecutor(this, requestId, callReceiver, consumer);
         mTwinlifeExecutor.execute(executor::start);
     }
 
@@ -3233,22 +3174,14 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             getPeerConnectionService().addServiceObserver(mPeerConnectionServiceObserver);
         }
 
-        TwincodeInboundService twincodeInboundService = getTwincodeInboundService();
-        twincodeInboundService.addListener(PairProtocol.ACTION_PAIR_BIND, mTwincodeInboundServiceObserver);
-        twincodeInboundService.addListener(PairProtocol.ACTION_PAIR_UNBIND, mTwincodeInboundServiceObserver);
-        twincodeInboundService.addListener(PairProtocol.ACTION_PAIR_INVITE, mTwincodeInboundServiceObserver);
-        twincodeInboundService.addListener(PairProtocol.ACTION_PAIR_REFRESH, mTwincodeInboundServiceObserver);
+        mRelationOrchestrator.onTwinlifeReady();
+        mConferenceOrchestrator.onTwinlifeReady();
 
-        twincodeInboundService.addListener(GroupProtocol.ACTION_GROUP_REGISTERED, mTwincodeInboundServiceObserver);
-        twincodeInboundService.addListener(GroupProtocol.ACTION_GROUP_SUBSCRIBE, mTwincodeInboundServiceObserver);
-
-        getTwincodeOutboundService().addServiceObserver(mTwincodeOutboundServiceObserver);
         getNotificationService().addServiceObserver(mNotificationServiceObserver);
 
         getConversationService().acceptPushTwincode(Invitation.SCHEMA_ID);
 
         RepositoryService repositoryService = getRepositoryService();
-        repositoryService.addServiceObserver(mRepositoryServiceObserver);
         boolean hasProfiles = repositoryService.hasObjects(Profile.SCHEMA_ID);
         boolean hasSpaces = repositoryService.hasObjects(Space.SCHEMA_ID);
 
@@ -3437,140 +3370,6 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         }
     }
 
-    private void onInvalidObject(@NonNull RepositoryObject object) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "onInvalidObject: object=" + object);
-        }
-
-        if (object instanceof Contact) {
-            deleteContact(BaseService.DEFAULT_REQUEST_ID, (Contact) object);
-        } else if (object instanceof Group) {
-            deleteGroup(BaseService.DEFAULT_REQUEST_ID, (Group) object);
-        } else if (object instanceof Space) {
-            deleteSpace(BaseService.DEFAULT_REQUEST_ID, (Space) object);
-        } else if (object instanceof CallReceiver) {
-            deleteCallReceiver(BaseService.DEFAULT_REQUEST_ID, (CallReceiver) object);
-        } else if (object instanceof Invitation) {
-            deleteInvitation(BaseService.DEFAULT_REQUEST_ID, (Invitation) object);
-        } else if (object instanceof Profile) {
-            deleteProfile(BaseService.DEFAULT_REQUEST_ID, (Profile) object);
-        } else if (object instanceof AccountMigration) {
-            deleteAccountMigration((AccountMigration) object, (ErrorCode errorCode, UUID id) -> {});
-        } else {
-            RepositoryService repositoryService = getRepositoryService();
-            repositoryService.deleteObject(object, (BaseService.ErrorCode status, UUID objectId) -> {
-            });
-        }
-    }
-
-    private void onProcessInvocation(@NonNull Invocation invocation) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "onProcessInvocation: invocation=" + invocation);
-        }
-
-        final RepositoryObject receiver = invocation.getReceiver();
-        if (invocation.getBackground()) {
-            if (receiver instanceof Profile) {
-                if (invocation instanceof PairInviteInvocation) {
-                    PairInviteInvocation pairInviteInvocation = (PairInviteInvocation) invocation;
-                    createContactPhase2(pairInviteInvocation, (Profile) receiver);
-                } else {
-                    assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
-
-                    acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
-                }
-            } else if (receiver instanceof Invitation) {
-                if (invocation instanceof PairInviteInvocation) {
-                    PairInviteInvocation pairInviteInvocation = (PairInviteInvocation) invocation;
-                    createContactPhase2(pairInviteInvocation, (Invitation) receiver);
-
-                } else if (invocation instanceof GroupSubscribeInvocation) {
-                    GroupSubscribeInvocation groupSubscribeInvocation = (GroupSubscribeInvocation) invocation;
-                    GroupSubscribeExecutor groupExecutor = new GroupSubscribeExecutor(this,
-                            groupSubscribeInvocation, (Invitation) receiver);
-                    mTwinlifeExecutor.execute(groupExecutor::start);
-
-                } else {
-                    assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
-
-                    acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
-                }
-            } else if (receiver instanceof Contact) {
-                Contact contact = (Contact) receiver;
-                if (invocation instanceof PairBindInvocation) {
-                    PairBindInvocation pairBindInvocation = (PairBindInvocation) invocation;
-
-                    // Post a notification for the new contact (contactPhase1 creation).
-                    if (isVisible(contact)) {
-                        mNotificationCenter.onNewContact(contact);
-                    }
-                    bindContact(pairBindInvocation, contact);
-
-                } else if (invocation instanceof PairUnbindInvocation) {
-                    PairUnbindInvocation pairUnbindInvocation = (PairUnbindInvocation) invocation;
-                    unbindContact(BaseService.DEFAULT_REQUEST_ID, pairUnbindInvocation.getId(), contact);
-
-                } else if (invocation instanceof PairRefreshInvocation) {
-                    PairRefreshInvocation pairRefreshInvocation = (PairRefreshInvocation) invocation;
-                    refreshRepositoryObject(pairRefreshInvocation, contact);
-
-                } else {
-                    assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
-
-                    acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
-                }
-            } else if (receiver instanceof Group) {
-                final Group group = (Group) receiver;
-                if (invocation instanceof GroupRegisteredInvocation) {
-                    GroupRegisteredInvocation groupRegisteredInvocation = (GroupRegisteredInvocation) invocation;
-                    GroupRegisteredExecutor groupExecutor
-                            = new GroupRegisteredExecutor(this, groupRegisteredInvocation, group);
-                    mTwinlifeExecutor.execute(groupExecutor::start);
-
-                } else if (invocation instanceof PairRefreshInvocation) {
-                    PairRefreshInvocation pairRefreshInvocation = (PairRefreshInvocation) invocation;
-                    refreshRepositoryObject(pairRefreshInvocation, group);
-
-                } else {
-                    assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
-
-                    acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
-                }
-
-            } else if (receiver instanceof AccountMigration) {
-                final AccountMigration accountMigration = (AccountMigration) receiver;
-
-                if (invocation instanceof PairInviteInvocation) {
-                    PairInviteInvocation pairBindInvocation = (PairInviteInvocation) invocation;
-                    bindAccountMigration(pairBindInvocation, accountMigration);
-
-                } else if (invocation instanceof PairUnbindInvocation) {
-                    deleteAccountMigration(accountMigration, (ErrorCode status, UUID deviceMigrationId) -> acknowledgeInvocation(invocation.getId(), ErrorCode.SUCCESS));
-
-                } else {
-                    assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
-
-                    acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
-                }
-
-            } else {
-                assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
-
-                acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
-            }
-        } else {
-            if (receiver instanceof Profile) {
-                onUpdateProfile(BaseService.DEFAULT_REQUEST_ID, (Profile) receiver);
-            } else if (receiver instanceof Contact) {
-                onUpdateContact(BaseService.DEFAULT_REQUEST_ID, (Contact) receiver);
-            } else {
-                assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
-
-                acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
-            }
-        }
-    }
-
     private void onIncomingPeerConnection(@NonNull UUID peerConnectionId, @NonNull String peerId, @NonNull Offer offer) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onIncomingPeerConnection: peerConnectionId=" + peerConnectionId + " peerId=" + peerId + " offer=" + offer);
@@ -3739,63 +3538,6 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
                 getPeerConnectionService().terminatePeerConnection(peerConnectionId, acceptP2P ? TerminateReason.GENERAL_ERROR : TerminateReason.NOT_AUTHORIZED);
             }
         });
-    }
-
-    @Nullable
-    private ErrorCode onInvokeTwincodeInbound(@NonNull TwincodeInvocation invocation) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "onInvokeTwincodeInbound: invocation=" + invocation );
-        }
-
-        ProcessInvocationExecutor processInvocationExecutor = new ProcessInvocationExecutor(this, invocation,
-                (ErrorCode errorCode, Invocation newInvocation) -> {
-            if (errorCode != ErrorCode.SUCCESS || newInvocation == null) {
-                acknowledgeInvocation(invocation.invocationId, errorCode);
-                return;
-            }
-            onProcessInvocation(newInvocation);
-        });
-        mTwinlifeExecutor.execute(processInvocationExecutor::start);
-        return null;
-    }
-
-    private void onRefreshTwincodeOutbound(@NonNull TwincodeOutbound twincodeOutbound,
-                                           @NonNull List<AttributeNameValue> previousAttributes) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "onRefreshTwincodeOutbound: twincodeOutbound=" + twincodeOutbound);
-        }
-
-        ExportedImageId oldAvatarId = null;
-        ImageId newAvatarId = twincodeOutbound.getAvatarId();
-        AttributeNameValue oldAvatarAttribute = AttributeNameValue.getAttribute(previousAttributes, Twincode.AVATAR_ID);
-        if (oldAvatarAttribute != null && oldAvatarAttribute.value instanceof ExportedImageId) {
-            oldAvatarId = (ExportedImageId) oldAvatarAttribute.value;
-        }
-
-        Filter<RepositoryObject> filter = new Filter<>(null);
-        filter.withTwincode(twincodeOutbound);
-        findContacts(filter, (List<Contact> contacts) -> {
-            for (Contact contact : contacts) {
-                onUpdateContact(BaseService.DEFAULT_REQUEST_ID, contact);
-            }
-        });
-
-        findGroups(filter, (List<Group> groups) -> {
-            for (Group group : groups) {
-                onUpdateGroup(BaseService.DEFAULT_REQUEST_ID, group);
-            }
-        });
-
-        // Detect a change of the avatar to cleanup our database and get the new image.
-        if ((oldAvatarId == null && newAvatarId != null) || (oldAvatarId != null && !oldAvatarId.equals(newAvatarId))) {
-            ImageService imageService = mTwinlifeImpl.getImageService();
-            if (oldAvatarId != null) {
-                imageService.evictImage(oldAvatarId);
-            }
-            if (newAvatarId != null) {
-                imageService.getImage(newAvatarId, ImageService.Kind.THUMBNAIL);
-            }
-        }
     }
 
     private void onPushDescriptor(@NonNull Conversation conversation, @NonNull Descriptor descriptor) {

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2015-2023 twinlife SA.
+ *  Copyright (c) 2015-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -19,11 +19,14 @@ import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.TwincodeFactory;
 import org.twinlife.twinlife.TwincodeOutbound;
 import org.twinlife.twinlife.TwincodeInbound;
+import org.twinlife.twinme.TwinmeContext;
+import org.twinlife.twinme.actions.SaveObjectAction;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-public abstract class TwinmeRepositoryObject implements RepositoryObject {
+public abstract class TwinmeRepositoryObject extends BaseSettings implements RepositoryObject {
     @NonNull
     protected final DatabaseIdentifier mDatabaseId;
     @NonNull
@@ -36,8 +39,6 @@ public abstract class TwinmeRepositoryObject implements RepositoryObject {
     protected TwincodeOutbound mTwincodeOutbound;
     @Nullable
     protected TwincodeInbound mTwincodeInbound;
-    @Nullable
-    protected String mDescription;
 
     TwinmeRepositoryObject(@NonNull DatabaseIdentifier identifier, @NonNull UUID id, long creationDate, long modificationDate) {
 
@@ -174,7 +175,30 @@ public abstract class TwinmeRepositoryObject implements RepositoryObject {
     @Override
     public String getDescription() {
 
-        return mDescription;
+        return mDescription == null ? "" : mDescription;
+    }
+
+    public void putBoolean(@NonNull String name, @NonNull Boolean value, @NonNull TwinmeContext twinmeContext) {
+
+        putString(name, value ? "1" : "0", twinmeContext);
+    }
+
+    public void putLong(@NonNull String name, long value, @NonNull TwinmeContext twinmeContext) {
+
+        putString(name, Long.toString(value), twinmeContext);
+    }
+
+    public void putString(@NonNull String name, @NonNull String value, @NonNull TwinmeContext twinmeContext) {
+
+        synchronized (this) {
+            if (mProperties == null) {
+                mProperties = new HashMap<>();
+            }
+            mProperties.put(name, value);
+        }
+
+        final SaveObjectAction action = new SaveObjectAction(twinmeContext, this);
+        action.start();
     }
 
     @Override

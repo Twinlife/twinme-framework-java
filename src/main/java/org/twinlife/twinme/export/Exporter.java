@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2023-2025 twinlife SA.
+ *  Copyright (c) 2023-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -75,9 +75,9 @@ class Exporter {
         }
 
         @Override
-        public int compareTo(ObjectInfo second) {
+        public int compareTo(@NonNull ObjectInfo second) {
 
-            return date < second.date ? -1 : 1;
+            return Long.compare(date, second.date);
         }
 
         @NonNull
@@ -297,14 +297,14 @@ class Exporter {
         for (Group group : groups) {
             final UUID twincodeOutboundId = group.getMemberTwincodeOutboundId();
             final String name = group.getIdentityName();
-            if (name == null) {
+            if (name == null || twincodeOutboundId == null) {
 
                 continue;
             }
 
             final UUID groupId = group.getGroupTwincodeOutboundId();
             final String groupName = group.getName();
-            if (groupName == null || groupId == null) {
+            if (groupId == null) {
 
                 continue;
             }

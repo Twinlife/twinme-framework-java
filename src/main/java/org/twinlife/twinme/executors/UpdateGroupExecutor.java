@@ -692,7 +692,7 @@ public class UpdateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
             Log.d(LOG_TAG, "onError: operationId=" + operationId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
         }
 
-        if (errorCode == ErrorCode.ITEM_NOT_FOUND && operationId == INVOKE_TWINCODE_OUTBOUND) {
+        if ((errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) && operationId == INVOKE_TWINCODE_OUTBOUND) {
             if (mRefreshMembers != null && !mRefreshMembers.isEmpty()) {
                 mRefreshMembers.remove(0);
             }

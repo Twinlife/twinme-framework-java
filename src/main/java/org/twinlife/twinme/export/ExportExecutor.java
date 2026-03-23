@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2023-2025 twinlife SA.
+ *  Copyright (c) 2023-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -655,14 +655,15 @@ public final class ExportExecutor extends AbstractTwinmeExecutor {
                 final UUID peerTwincodeOutboundId = contact.getPeerTwincodeOutboundId();
                 final UUID twincodeInboundId = contact.getTwincodeInboundId();
                 if (twincodeInboundId == null || twincodeOutboundId == null || peerTwincodeOutboundId == null) {
-
                     continue;
                 }
 
                 final ConversationService.Conversation conversation = conversationService.getConversation(contact);
+                if (conversation == null) {
+                    continue;
+                }
                 final Set<UUID> twincodes = conversationService.getConversationTwincodes(conversation, null, mBeforeDate);
                 if (twincodes == null) {
-
                     continue;
                 }
 

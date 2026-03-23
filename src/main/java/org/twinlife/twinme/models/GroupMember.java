@@ -18,6 +18,7 @@ import org.twinlife.twinlife.DatabaseIdentifier;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.TwincodeInbound;
 import org.twinlife.twinlife.TwincodeOutbound;
+import org.twinlife.twinme.TwinmeContext;
 import org.twinlife.twinme.util.TwinmeAttributes;
 
 import java.util.ArrayList;
@@ -33,7 +34,7 @@ import java.util.UUID;
  * getIdentityAvatar -> picture of the member
  *
  * The group member information is initialized from the group member twincode passed in the constructor.
- * The GroupMember instance is not stored in the repository but it is cached in the Twinme context.
+ * The GroupMember instance is not stored in the repository, but it is cached in the Twinme context.
  */
 
 public class GroupMember implements Originator {
@@ -42,8 +43,6 @@ public class GroupMember implements Originator {
     @Nullable
     private String mMemberName;
     // The current member twincode outbound id.
-    //@Nullable
-    //private final UUID mMemberTwincodeOutboundId;
     @Nullable
     private final UUID mInvitedByMemberTwincodeOutboundId;
     @NonNull
@@ -74,7 +73,7 @@ public class GroupMember implements Originator {
     @Override
     public synchronized String getName() {
 
-        return mPeerTwincodeOutbound.getName();
+        return mPeerTwincodeOutbound.getName() == null ? "" : mPeerTwincodeOutbound.getName();
     }
 
     @Override
@@ -87,7 +86,7 @@ public class GroupMember implements Originator {
     @Override
     public boolean hasPeer() {
 
-        return mPeerTwincodeOutbound != null;
+        return true;
     }
 
     @Override
@@ -258,6 +257,25 @@ public class GroupMember implements Originator {
     public List<BaseService.AttributeNameValue> getAttributes(boolean exportAll) {
 
         return new ArrayList<>();
+    }
+
+    @NonNull
+    @Override
+    public String getString(@NonNull String name, @NonNull String defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
+    public long getLong(@NonNull String name, long defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
+    public boolean getBoolean(@NonNull String name, boolean defaultValue) {
+        return defaultValue;
+    }
+
+    public void putString(@NonNull String name, @NonNull String value, @NonNull TwinmeContext twinmeContext) {
     }
 
     //

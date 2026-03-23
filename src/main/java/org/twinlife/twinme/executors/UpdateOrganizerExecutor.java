@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2023-2026 twinlife SA.
+ *  Copyright (c) 2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -15,37 +15,32 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.ErrorCode;
 import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
-import org.twinlife.twinlife.TwincodeOutbound;
+import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.util.Utils;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.models.CallReceiver;
-import org.twinlife.twinme.models.Capabilities;
-import org.twinlife.twinme.util.TwinmeAttributes;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 //
 // Executor and observers are running in the SingleThreadExecutor provided by the twinlife library
 // Observers are reachable (not eligible for garbage collection) between start() and stop() calls
 //
-// version: 1.3
+// version: 1.1
 //
 
-public class UpdateCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
-    private static final String LOG_TAG = "UpdateCallReceiverExec";
+public class UpdateOrganizerExecutor extends AbstractTimeoutTwinmeExecutor {
+    private static final String LOG_TAG = "UpdateOrganizerExec";
     private static final boolean DEBUG = false;
 
     private static final int CREATE_IMAGE = 1;
     private static final int CREATE_IMAGE_DONE = 1 << 1;
-    private static final int UPDATE_TWINCODE_OUTBOUND = 1 << 2;
-    private static final int UPDATE_TWINCODE_OUTBOUND_DONE = 1 << 3;
+    private static final int UPDATE_OBJECT = 1 << 4;
+    private static final int UPDATE_OBJECT_DONE = 1 << 5;
     private static final int DELETE_OLD_IMAGE = 1 << 6;
     private static final int DELETE_OLD_IMAGE_DONE = 1 << 7;
 
@@ -53,6 +48,7 @@ public class UpdateCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
     private final CallReceiver mCallReceiver;
     @NonNull
     private final String mIdentityName;
+
     @Nullable
     private final String mIdentityDescription;
     @Nullable
@@ -62,20 +58,16 @@ public class UpdateCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
     private ExportedImageId mAvatarId;
     @Nullable
     private final ImageId mOldAvatarId;
-    private final boolean mUpdateTwincode;
-    private final TwincodeOutbound mTwincodeOutbound;
+    private final boolean mUpdateObject;
     private final boolean mCreateImage;
 
-    @Nullable
-    private final String mCapabilities;
-
-    public UpdateCallReceiverExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull CallReceiver callReceiver,
-                                      @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile,
-                                      @Nullable Capabilities capabilities) {
+    public UpdateOrganizerExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull CallReceiver callReceiver,
+                                   @NonNull String identityName, @Nullable String identityDescription, @Nullable Bitmap avatar, @Nullable File avatarFile) {
         super(twinmeContextImpl, requestId, LOG_TAG, DEFAULT_TIMEOUT);
         if (DEBUG) {
-            Log.d(LOG_TAG, "UpdateCallReceiverExecutor: twinmeContextImpl=" + twinmeContextImpl + " requestId=" + requestId +
-                    " callReceiver=" + callReceiver + " name=" + name + " avatar=" + avatar + " description=" + description + " capabilities=" + capabilities);
+            Log.d(LOG_TAG, "UpdateOrganizerExecutor: twinmeContextImpl=" + twinmeContextImpl + " requestId=" + requestId +
+                    " callReceiver=" + callReceiver + " identityName=" + identityName + "identityName=" + identityName + " avatar=" + avatar
+                    + " identityDescription=" + identityDescription);
         }
 
         // Important note :
@@ -84,22 +76,16 @@ public class UpdateCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
         // BUT, for a click-to-call, this identity must be saved elsewhere and only in the database.
         // Such identity is saved in the database object and we use the term `name` and `description` for that.
         mCallReceiver = callReceiver;
-        mIdentityName = name;
-        mIdentityDescription = description;
+        mIdentityName = identityName;
+        mIdentityDescription = identityDescription;
         mAvatar = avatar;
         mAvatarFile = avatarFile;
-        mOldAvatarId = callReceiver.getAvatarId();
-        mCapabilities = capabilities == null ? null : capabilities.toAttributeValue();
+        mOldAvatarId = callReceiver.getIdentityAvatarId();
         mCreateImage = avatarFile != null;
 
-        // Check if one of the twincode attributes is modified.
-        boolean updateIdentityDescription = !Utils.equals(mIdentityDescription, mCallReceiver.getIdentityDescription());
-        boolean updateCapabilities = !Utils.equals(mCapabilities, mCallReceiver.getCapabilities().toAttributeValue());
-        boolean updateIdentityName = !Utils.equals(mIdentityName, mCallReceiver.getIdentityName());
-
-        mUpdateTwincode = updateIdentityName || mCreateImage || updateIdentityDescription || updateCapabilities;
-
-        mTwincodeOutbound = mCallReceiver.getTwincodeOutbound();
+        mUpdateObject = !Utils.equals(mIdentityName, mCallReceiver.getIdentityName())
+                || !Utils.equals(mIdentityDescription, mCallReceiver.getIdentityDescription())
+                || mCreateImage;
     }
 
     @Override
@@ -111,9 +97,6 @@ public class UpdateCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
         if (mRestarted) {
             if ((mState & CREATE_IMAGE) != 0 && (mState & CREATE_IMAGE_DONE) == 0) {
                 mState &= ~CREATE_IMAGE;
-            }
-            if ((mState & UPDATE_TWINCODE_OUTBOUND) != 0 && (mState & UPDATE_TWINCODE_OUTBOUND_DONE) == 0) {
-                mState &= ~UPDATE_TWINCODE_OUTBOUND;
             }
             if ((mState & DELETE_OLD_IMAGE) != 0 && (mState & DELETE_OLD_IMAGE_DONE) == 0) {
                 mState &= ~DELETE_OLD_IMAGE;
@@ -157,35 +140,23 @@ public class UpdateCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
         }
 
         //
-        // Step 2: update the twincode outbound if needed.
+        // Step 3: update object if the name changed
         //
-        if (mUpdateTwincode && mTwincodeOutbound != null) {
+        if (mUpdateObject) {
+            if ((mState & UPDATE_OBJECT) == 0) {
+                mState |= UPDATE_OBJECT;
 
-            if ((mState & UPDATE_TWINCODE_OUTBOUND) == 0) {
-                mState |= UPDATE_TWINCODE_OUTBOUND;
-
-                List<BaseService.AttributeNameValue> attributes = new ArrayList<>();
-                if (!mIdentityName.equals(mCallReceiver.getName())) {
-                    TwinmeAttributes.setTwincodeAttributeName(attributes, mIdentityName);
-                }
-                if (mAvatarId != null) {
-                    TwinmeAttributes.setTwincodeAttributeAvatarId(attributes, mAvatarId);
-                }
-                if (mIdentityDescription != null) {
-                    TwinmeAttributes.setTwincodeAttributeDescription(attributes, mIdentityDescription);
-                }
-                if (mCapabilities != null) {
-                    TwinmeAttributes.setCapabilities(attributes, mCapabilities);
+                mCallReceiver.setOrganizerName(mIdentityName);
+                mCallReceiver.setOrganizerDescription(mIdentityDescription);
+                if (mCreateImage) {
+                    mCallReceiver.setOrganizerAvatarId(mAvatarId);
                 }
 
-                if (DEBUG) {
-                    Log.d(LOG_TAG, "TwincodeOutboundService.updateTwincode: twincodeOutbound=" + mTwincodeOutbound);
-                }
-                mTwinmeContextImpl.getTwincodeOutboundService().updateTwincode(mTwincodeOutbound, attributes, null,
-                        this::onUpdateTwincodeOutbound);
+                mTwinmeContextImpl.getRepositoryService().updateObject(mCallReceiver, this::onUpdateObject);
                 return;
             }
-            if ((mState & UPDATE_TWINCODE_OUTBOUND_DONE) == 0) {
+
+            if ((mState & UPDATE_OBJECT_DONE) == 0) {
                 return;
             }
         }
@@ -235,24 +206,6 @@ public class UpdateCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
         onOperation();
     }
 
-    private void onUpdateTwincodeOutbound(@NonNull ErrorCode errorCode, @Nullable TwincodeOutbound twincodeOutbound) {
-        if (DEBUG) {
-            Log.d(LOG_TAG, "onUpdateTwincodeOutbound: errorCode=" + errorCode + " twincodeOutbound=" + twincodeOutbound);
-        }
-
-        if (errorCode != ErrorCode.SUCCESS || twincodeOutbound == null) {
-            onOperationError(UPDATE_TWINCODE_OUTBOUND, errorCode, null);
-            return;
-        }
-
-        mTwinmeContextImpl.assertEqual(ExecutorAssertPoint.INVALID_TWINCODE, twincodeOutbound, mTwincodeOutbound);
-
-        mState |= UPDATE_TWINCODE_OUTBOUND_DONE;
-
-        mCallReceiver.setTwincodeOutbound(twincodeOutbound);
-        onOperation();
-    }
-
     private void onDeleteImage(@NonNull ErrorCode errorCode, @Nullable ImageId imageId) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onDeleteImage: errorCode=" + errorCode + " imageId=" + imageId);
@@ -265,6 +218,22 @@ public class UpdateCallReceiverExecutor extends AbstractTimeoutTwinmeExecutor {
 
         // Ignore the error and proceed!!!
         mState |= DELETE_OLD_IMAGE_DONE;
+        onOperation();
+    }
+
+    private void onUpdateObject(@NonNull ErrorCode errorCode, @Nullable RepositoryObject object) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onUpdateObject: object=" + object);
+        }
+
+        if (errorCode != ErrorCode.SUCCESS || object == null) {
+            onOperationError(UPDATE_OBJECT, errorCode, null);
+            return;
+        }
+
+        mTwinmeContextImpl.assertEqual(ExecutorAssertPoint.INVALID_SUBJECT, object, mCallReceiver);
+
+        mState |= UPDATE_OBJECT_DONE;
         onOperation();
     }
 }

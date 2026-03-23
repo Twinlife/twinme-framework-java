@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2021 twinlife SA.
+ *  Copyright (c) 2021-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -21,7 +21,7 @@ public enum TwincodeKind {
     // The twincode is a group member.
     GROUP_MEMBER,
 
-    // The twincode is a twinroom with specific capabilities.
+    // The twincode is a twinroom with specific capabilities (represented by a Contact).
     TWINROOM,
 
     // The twincode is used for account migration.
@@ -29,8 +29,12 @@ public enum TwincodeKind {
 
     // The twincode describes a managed space.
     SPACE,
+
     // The twincode describes a call receiver.
-    CALL_RECEIVER;
+    CALL_RECEIVER,
+
+    // The twincode is a conference link (represented by a CallReceiver).
+    CONFERENCE;
 
     /**
      * Serializable value. e.g. CALL_RECEIVER => call_receiver
@@ -38,8 +42,8 @@ public enum TwincodeKind {
     public final String value = name().toLowerCase().replace('_','-');
 
     static TwincodeKind getByValue(String value){
-        for(TwincodeKind kind: TwincodeKind.values()){
-            if(kind.value.equals(value)){
+        for (TwincodeKind kind: TwincodeKind.values()){
+            if (kind.value.equals(value)){
                 return kind;
             }
         }

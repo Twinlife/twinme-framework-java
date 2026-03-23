@@ -35,7 +35,7 @@ import java.util.UUID;
  *
  * - it can be accepted only once,
  * - it can be accepted only if it has not expired,
- * - if can be accepted only by the group member to which the invitation was sent.
+ * - it can be accepted only by the group member to which the invitation was sent.
  *
  * Unlike sharing the Profile twincode, the invitation can be withdrawn.
  *
@@ -142,8 +142,10 @@ public class Invitation extends TwinmeRepositoryObject {
             }
         }
 
-        if (code != null) {
-            mInvitationCode = new InvitationCodeImpl(codeCreationDate, codeValidityPeriod, code, getTwincodeOutboundId(), codePublicKey);
+        UUID twincodeOutboundId = getTwincodeOutboundId();
+
+        if (code != null && twincodeOutboundId != null) {
+            mInvitationCode = new InvitationCodeImpl(codeCreationDate, codeValidityPeriod, code, twincodeOutboundId, codePublicKey);
         }
     }
 

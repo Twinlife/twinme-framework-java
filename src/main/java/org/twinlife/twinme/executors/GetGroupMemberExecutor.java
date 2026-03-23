@@ -180,7 +180,7 @@ public class GetGroupMemberExecutor extends AbstractTwinmeExecutor {
             return;
         }
 
-        if (operationId == GET_MEMBER_TWINCODE_OUTBOUND && errorCode == ErrorCode.ITEM_NOT_FOUND) {
+        if (operationId == GET_MEMBER_TWINCODE_OUTBOUND && (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED)) {
             UUID uuid = Utils.UUIDFromString(errorParameter);
 
             mTwinmeContextImpl.assertEqual(ExecutorAssertPoint.INVALID_TWINCODE, mMemberTwincodeOutboundId, uuid);

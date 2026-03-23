@@ -52,8 +52,6 @@ public class UpdateSettingsExecutor extends AbstractTimeoutTwinmeExecutor {
     private static final int DELETE_SPACE_IMAGE_DONE = 1 << 9;
 
     @NonNull
-    private final SpaceSettings mCurrentSettings;
-    @NonNull
     private SpaceSettings mSpaceSettings;
     @Nullable
     private final Bitmap mSpaceAvatar;
@@ -82,7 +80,7 @@ public class UpdateSettingsExecutor extends AbstractTimeoutTwinmeExecutor {
         mConsumer = consumer;
 
         // If the spaceSettings parameter has a different ID, build a new instance with our space settings ID.
-        mCurrentSettings = spaceSettings;
+        SpaceSettings mCurrentSettings = spaceSettings;
         if (mCurrentSettings.getId() != null && !mCurrentSettings.getId().equals(spaceSettings.getId())) {
             spaceSettings = new SpaceSettings(mCurrentSettings, spaceSettings);
         }

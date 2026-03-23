@@ -287,7 +287,7 @@ public class RefreshObjectExecutor extends AbstractConnectedTwinmeExecutor {
         }
 
         // If the peer twincode does not exist anymore, proceed with an unbind: this contact is dead now.
-        if (errorCode == ErrorCode.ITEM_NOT_FOUND && operationId == REFRESH_PEER_TWINCODE_OUTBOUND) {
+        if ((errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) && operationId == REFRESH_PEER_TWINCODE_OUTBOUND) {
             mState |= REFRESH_PEER_TWINCODE_OUTBOUND_DONE | UPDATE_OBJECT | UPDATE_OBJECT_DONE;
             if (mInvocation != null && mContact != null) {
                 mTwinmeContextImpl.unbindContact(mRequestId, mInvocation.getId(), mContact);

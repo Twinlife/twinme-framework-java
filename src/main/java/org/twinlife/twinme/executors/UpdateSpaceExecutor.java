@@ -54,8 +54,6 @@ public class UpdateSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
 
     @NonNull
     private final Space mSpace;
-    @NonNull
-    private final SpaceSettings mCurrentSettings;
     @Nullable
     private SpaceSettings mSpaceSettings;
     @Nullable
@@ -85,7 +83,7 @@ public class UpdateSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
         mSpaceAvatarFile = spaceAvatarFile;
 
         // If the spaceSettings parameter has a different ID, build a new instance with our space settings ID.
-        mCurrentSettings = space.getSpaceSettings();
+        SpaceSettings mCurrentSettings = space.getSpaceSettings();
         if (spaceSettings != null && mCurrentSettings.getId() != null && !mCurrentSettings.getId().equals(spaceSettings.getId())) {
             spaceSettings = new SpaceSettings(mCurrentSettings, spaceSettings);
         }

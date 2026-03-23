@@ -85,8 +85,6 @@ public abstract class MessageAction extends TwinmeAction {
     private final long mRequestId;
     @Nullable
     private UUID mConversationId;
-    @Nullable
-    private Conversation mConversation;
     private boolean mNeedConversationId = true;
 
     public MessageAction(@NonNull TwinmeContext twinmeContext, @NonNull Contact contact,
@@ -141,7 +139,7 @@ public abstract class MessageAction extends TwinmeAction {
                 return;
             }
 
-            mConversation = mConversationService.getOrCreateConversation(mContact);
+            Conversation mConversation = mConversationService.getOrCreateConversation(mContact);
             if (mConversation == null) {
                 fireError(ErrorCode.ITEM_NOT_FOUND);
             } else if (mMode == Mode.MESSAGE) {

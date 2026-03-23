@@ -205,7 +205,7 @@ public class GetAccountMigrationExecutor extends AbstractConnectedTwinmeExecutor
         }
 
         // Peer's twincode is now invalid, delete the account migration object.
-        if (errorCode == ErrorCode.ITEM_NOT_FOUND && operationId == REFRESH_PEER_TWINCODE_OUTBOUND) {
+        if ((errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) && operationId == REFRESH_PEER_TWINCODE_OUTBOUND) {
             mState |= REFRESH_PEER_TWINCODE_OUTBOUND;
             mToBeDeleted = true;
             return;

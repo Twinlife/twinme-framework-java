@@ -72,8 +72,8 @@ public class Contact extends TwinmeRepositoryObject implements Originator {
     private UUID mPublicPeerTwincodeOutboundId;
     @Nullable
     private TwincodeOutbound mPeerTwincodeOutbound;
-    private double mUsageScore;
-    private long mLastMessageDate;
+    private final double mUsageScore;
+    private final long mLastMessageDate;
     @Nullable
     private UUID mGroupId;
     @Nullable
@@ -138,6 +138,11 @@ public class Contact extends TwinmeRepositoryObject implements Originator {
                         }
                         break;
 
+                    case "properties":
+                        if (attribute instanceof BaseService.AttributeNameListValue) {
+                            updateProperties((BaseService.AttributeNameListValue) attribute);
+                        }
+                        break;
                 }
             }
         }
@@ -160,6 +165,7 @@ public class Contact extends TwinmeRepositoryObject implements Originator {
         Space space;
         String name, description;
         boolean hasPrivatePeer;
+        BaseService.AttributeNameListValue settings;
         synchronized (this) {
             publicPeerTwincodeOutboundId = mPublicPeerTwincodeOutboundId;
             groupId = mGroupId;
@@ -171,6 +177,7 @@ public class Contact extends TwinmeRepositoryObject implements Originator {
             twincodeOutbound = mTwincodeOutbound;
             hasPrivatePeer = mHasPrivatePeer;
             peerTwincodeOutbound = mPeerTwincodeOutbound;
+            settings = export();
         }
 
         List<AttributeNameValue> attributes = new ArrayList<>();
@@ -193,6 +200,9 @@ public class Contact extends TwinmeRepositoryObject implements Originator {
         }
         if (!hasPrivatePeer) {
             attributes.add(new BaseService.AttributeNameBooleanValue("noPrivatePeer", true));
+        }
+        if (settings != null) {
+            attributes.add(settings);
         }
 
         return attributes;
@@ -536,17 +546,10 @@ public class Contact extends TwinmeRepositoryObject implements Originator {
         // Invariant: Contact <<->> PeerTwincodeOutbound
         //
 
-        invariant = (publicPeerTwincodeOutboundId == null && privatePeerTwincodeOutboundId == null && peerTwincodeOutbound == null) ||
+        return (publicPeerTwincodeOutboundId == null && privatePeerTwincodeOutboundId == null && peerTwincodeOutbound == null) ||
                 (privatePeerTwincodeOutboundId != null && privatePeerTwincodeOutboundId.equals(peerTwincodeOutbound.getId())) ||
                 (publicPeerTwincodeOutboundId != null && privatePeerTwincodeOutboundId == null && peerTwincodeOutbound != null &&
                         publicPeerTwincodeOutboundId.equals(peerTwincodeOutbound.getId()));
-        if (!invariant) {
-
-            return false;
-
-        }
-
-        return invariant;
     }
 
     //

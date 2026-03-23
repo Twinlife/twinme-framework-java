@@ -306,7 +306,7 @@ public class DeleteInvitationExecutor extends AbstractTimeoutTwinmeExecutor {
         }
 
         // The delete operation succeeds if we get an item not found error.
-        if (errorCode == ErrorCode.ITEM_NOT_FOUND) {
+        if (errorCode == ErrorCode.ITEM_NOT_FOUND | errorCode == ErrorCode.EXPIRED) {
             switch (operationId) {
 
                 case UNBIND_INVITATION_TWINCODE_INBOUND:

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2021-2025 twinlife SA.
+ *  Copyright (c) 2021-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -212,6 +212,31 @@ public class Capabilities {
     }
 
     /**
+     * @return true if the webapp must notify when the first member joins the conference.
+     */
+    public boolean hasNotifyJoin() {
+        return hasCap(ToggleableCap.NOTIFY_JOIN);
+    }
+
+    /**
+     * Returns the link validity enum telling how long the link is valid.
+     * @return PERMANENT if the link is always valid (until it is removed), PERIODIC if the link
+     * is associated with a periodic schedule, SINGLE_USE if the link is valid only once and will
+     * be removed automatically.
+     */
+    @NonNull
+    public LinkValidity getLinkValidity() {
+        parse();
+        if (hasCap(ToggleableCap.AUTO_DELETE)) {
+            return LinkValidity.SINGLE_USE;
+        }
+        if (hasCap(ToggleableCap.PERIODIC)) {
+            return LinkValidity.PERIODIC;
+        }
+        return LinkValidity.PERMANENT;
+    }
+
+    /**
      * Returns the Zoomable enum telling if the peer can take control of the zoom during a video call.
      * @return NEVER if the peer is not allowed (no need to ask), ALLOW if the peer is allowed without
      * asking and ASK if a confirmation is required (the default).
@@ -359,6 +384,33 @@ public class Capabilities {
         update();
     }
 
+    public void setCapNotifyJoin(boolean value) {
+        parse();
+        changeCapability(ToggleableCap.NOTIFY_JOIN, !value);
+        update();
+    }
+
+    public void setLinkValidity(@NonNull LinkValidity linkValidity) {
+        parse();
+        switch (linkValidity) {
+            case PERIODIC:
+                changeCapability(ToggleableCap.PERIODIC, false);
+                changeCapability(ToggleableCap.AUTO_DELETE, true);
+                break;
+
+            case SINGLE_USE:
+                changeCapability(ToggleableCap.PERIODIC, true);
+                changeCapability(ToggleableCap.AUTO_DELETE, false);
+                break;
+
+            default:
+                changeCapability(ToggleableCap.PERIODIC, true);
+                changeCapability(ToggleableCap.AUTO_DELETE, true);
+                break;
+        }
+        update();
+    }
+
     public void setZoomable(@NonNull Zoomable zoomable) {
         parse();
         switch (zoomable) {
@@ -405,7 +457,7 @@ public class Capabilities {
      * @param updater applied to the current schedule.
      */
     public void updateSchedule(TwinmeContext.Consumer<Schedule> updater){
-        if(mSchedule != null) {
+        if (mSchedule != null) {
             updater.accept(mSchedule);
             update();
         }
@@ -512,34 +564,39 @@ public class Capabilities {
                 capValue = null;
             }
 
-            if (capName.equals(CAP_NAME_CLASS)) {
-                if (capValue != null) {
-                    mKind = TwincodeKind.getByValue(capValue);
-                    Long override = overrideCaps.get(mKind);
-                    if (override != null) {
-                        mFlags &= override;
+            switch (capName) {
+                case CAP_NAME_CLASS:
+                    if (capValue != null) {
+                        mKind = TwincodeKind.getByValue(capValue);
+                        Long override = overrideCaps.get(mKind);
+                        if (override != null) {
+                            mFlags &= override;
+                        }
                     }
-                }
-            } else if (capName.equals(CAP_NAME_SCHEDULE)){
-                if(capValue != null) {
-                    mSchedule = Schedule.ofCapability(capValue);
-                }
-            } else if (capName.equals(CAP_TRUSTED)){
-                if (capValue != null) {
-                    mTrusted = capValue;
-                }
-            } else {
-                boolean removeMode = false;
+                    break;
+                case CAP_NAME_SCHEDULE:
+                    if (capValue != null) {
+                        mSchedule = Schedule.ofCapability(capValue);
+                    }
+                    break;
+                case CAP_TRUSTED:
+                    if (capValue != null) {
+                        mTrusted = capValue;
+                    }
+                    break;
+                default:
+                    boolean removeMode = false;
 
-                if (capName.startsWith("!")) {
-                    removeMode = true;
-                    capName = capName.substring(1);
-                }
+                    if (capName.startsWith("!")) {
+                        removeMode = true;
+                        capName = capName.substring(1);
+                    }
 
-                ToggleableCap toggleableCap = ToggleableCap.getByLabel(capName);
-                if (toggleableCap != null) {
-                    changeCapability(toggleableCap, removeMode);
-                }
+                    ToggleableCap toggleableCap = ToggleableCap.getByLabel(capName);
+                    if (toggleableCap != null) {
+                        changeCapability(toggleableCap, removeMode);
+                    }
+                    break;
             }
         }
     }

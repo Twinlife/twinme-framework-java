@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2023 twinlife SA.
+ *  Copyright (c) 2023-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -47,6 +47,12 @@ public class CallReceiver extends TwinmeRepositoryObject implements Originator, 
 
     @Nullable
     private Space mSpace;
+    @Nullable
+    private ImageId mOrganizerAvatarId;
+    @Nullable
+    private String mOrganizerName;
+    @Nullable
+    private String mOrganizerDescription;
 
     CallReceiver(@NonNull DatabaseIdentifier identifier, @NonNull UUID uuid,
                  long creationDate, @Nullable String name, @Nullable String description,
@@ -58,12 +64,25 @@ public class CallReceiver extends TwinmeRepositoryObject implements Originator, 
         update(name, description, attributes, modificationDate);
     }
 
-    void update(@Nullable String name, @Nullable String description, @Nullable List<BaseService.AttributeNameValue> attributes,
-                long modificationDate) {
+    synchronized void update(@Nullable String name, @Nullable String description, @Nullable List<BaseService.AttributeNameValue> attributes,
+                             long modificationDate) {
 
         mName = name;
         mDescription = description;
         mModificationDate = modificationDate;
+        if (attributes != null) {
+            for (BaseService.AttributeNameValue attribute : attributes) {
+                if ("properties".equals(attribute.name) && attribute instanceof BaseService.AttributeNameListValue) {
+                    updateProperties((BaseService.AttributeNameListValue)attribute);
+                } else if ("organizerAvatarId".equals(attribute.name) && attribute.value instanceof Long) {
+                    mOrganizerAvatarId = new ImageId((Long) attribute.value);
+                } else if ("organizerName".equals(attribute.name) && attribute.value instanceof String) {
+                    mOrganizerName = (String) attribute.value;
+                } else if ("organizerDescription".equals(attribute.name) && attribute.value instanceof String) {
+                    mOrganizerDescription = (String) attribute.value;
+                }
+            }
+        }
     }
 
     //
@@ -78,6 +97,10 @@ public class CallReceiver extends TwinmeRepositoryObject implements Originator, 
         Space space;
         String name;
         String description;
+        BaseService.AttributeNameListValue settings;
+        ImageId organizerAvatarId;
+        String organizerName;
+        String organizerDescription;
 
         synchronized (this) {
             name = mName;
@@ -85,12 +108,28 @@ public class CallReceiver extends TwinmeRepositoryObject implements Originator, 
             space = mSpace;
             twincodeInbound = mTwincodeInbound;
             twincodeOutbound = mTwincodeOutbound;
+            organizerAvatarId = mOrganizerAvatarId;
+            organizerName = mOrganizerName;
+            organizerDescription = mOrganizerDescription;
+            settings = export();
         }
 
         final List<BaseService.AttributeNameValue> attributes = new ArrayList<>();
 
         if (exportAll) {
             exportAttributes(attributes, name, description, space, twincodeInbound, twincodeOutbound);
+        }
+        if (organizerAvatarId != null) {
+            attributes.add(new BaseService.AttributeNameLongValue("organizerAvatarId", organizerAvatarId.getId()));
+        }
+        if (organizerName != null) {
+            attributes.add(new BaseService.AttributeNameStringValue("organizerName", organizerName));
+        }
+        if (organizerDescription != null) {
+            attributes.add(new BaseService.AttributeNameStringValue("organizerDescription", organizerDescription));
+        }
+        if (settings != null) {
+            attributes.add(settings);
         }
 
         return attributes;
@@ -144,22 +183,58 @@ public class CallReceiver extends TwinmeRepositoryObject implements Originator, 
         return null;
     }
 
+    // Important note :
+    // the term `identityName` and `identityDescription` refers to the user's identity for a relation.
+    // For a Profile, Contact, Group, it is stored in the twincode associated with the object.
+    // BUT, for a click-to-call, this identity must be saved elsewhere and only in the database.
+    // Such identity is saved in the database object, and we use the term `name` and `description` for that.
     @Nullable
     @Override
     public String getIdentityName() {
-        return mTwincodeOutbound == null ? null : mTwincodeOutbound.getName();
+
+        return mOrganizerName == null ? "" : mOrganizerName;
     }
 
     @Nullable
     @Override
     public String getIdentityDescription() {
-        return mTwincodeOutbound == null ? null : mTwincodeOutbound.getDescription();
+
+        return mOrganizerDescription == null ? "" : mOrganizerDescription;
+    }
+
+    @Override
+    @NonNull
+    public String getName() {
+
+        return mTwincodeOutbound == null || mTwincodeOutbound.getName() == null ? "" : mTwincodeOutbound.getName();
+    }
+
+    @NonNull
+    @Override
+    public String getDescription() {
+
+        return mTwincodeOutbound == null || mTwincodeOutbound.getDescription() == null ? "" : mTwincodeOutbound.getDescription();
     }
 
     @Nullable
     @Override
     public ImageId getIdentityAvatarId() {
-        return getAvatarId();
+        return mOrganizerAvatarId;
+    }
+
+    public void setOrganizerAvatarId(@Nullable ImageId organizerAvatarId) {
+
+        mOrganizerAvatarId = organizerAvatarId;
+    }
+
+    public void setOrganizerName(@Nullable String name) {
+
+        mOrganizerName = name;
+    }
+
+    public void setOrganizerDescription(@Nullable String description) {
+
+        mOrganizerDescription = description;
     }
 
     @Nullable
@@ -191,6 +266,15 @@ public class CallReceiver extends TwinmeRepositoryObject implements Originator, 
         return getCapabilities().hasGroupCall();
     }
 
+    public boolean isConference() {
+        return getCapabilities().getKind() == TwincodeKind.CONFERENCE;
+    }
+
+    public boolean hasNotifyJoin() {
+
+        return getCapabilities().hasNotifyJoin();
+    }
+
     @Override
     public boolean hasPeer() {
         return true;
@@ -205,9 +289,7 @@ public class CallReceiver extends TwinmeRepositoryObject implements Originator, 
     @Override
     public Capabilities getCapabilities() {
         String capabilities = mTwincodeOutbound == null ? null : mTwincodeOutbound.getCapabilities();
-        Capabilities res = capabilities == null ? new Capabilities() : new Capabilities(capabilities);
-        res.setKind(TwincodeKind.CALL_RECEIVER);
-        return res;
+        return capabilities == null ? new Capabilities() : new Capabilities(capabilities);
     }
 
     @Nullable

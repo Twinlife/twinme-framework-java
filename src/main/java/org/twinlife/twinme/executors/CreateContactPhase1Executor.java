@@ -411,7 +411,7 @@ public class CreateContactPhase1Executor extends AbstractTimeoutTwinmeExecutor {
         }
 
         if (operationId == INVOKE_TWINCODE_OUTBOUND || operationId == CREATE_OBJECT) {
-            if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.NO_PRIVATE_KEY
+            if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED || errorCode == ErrorCode.NO_PRIVATE_KEY
                     || errorCode == ErrorCode.INVALID_PUBLIC_KEY || errorCode == ErrorCode.INVALID_PRIVATE_KEY) {
                 // The peer twincode is invalid, delete the contact without waiting (do not timeout on this delete).
                 new DeleteContactExecutor(mTwinmeContextImpl, mTwinmeContextImpl.newRequestId(),

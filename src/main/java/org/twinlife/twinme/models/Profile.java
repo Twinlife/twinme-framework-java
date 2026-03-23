@@ -1,10 +1,11 @@
 /*
- *  Copyright (c) 2015-2023 twinlife SA.
+ *  Copyright (c) 2015-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
  *   Christian Jacquemot (Christian.Jacquemot@twinlife-systems.com)
  *   Stephane Carrez (Stephane.Carrez@twin.life)
+ *   Romain Kolb (romain.kolb@skyrock.com)
  */
 
 package org.twinlife.twinme.models;
@@ -12,6 +13,7 @@ package org.twinlife.twinme.models;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameLongValue;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
 import org.twinlife.twinlife.BuildConfig;
@@ -84,6 +86,8 @@ public class Profile extends TwinmeRepositoryObject {
                     if (attribute instanceof AttributeNameLongValue) {
                         mPriority = (Long) attribute.value;
                     }
+                } else if ("properties".equals(attribute.name) && attribute instanceof BaseService.AttributeNameListValue) {
+                    updateProperties((BaseService.AttributeNameListValue)attribute);
                 }
             }
         }
@@ -122,6 +126,7 @@ public class Profile extends TwinmeRepositoryObject {
         TwincodeOutbound twincodeOutbound;
         TwincodeInbound twincodeInbound;
         Space space;
+        BaseService.AttributeNameListValue settings;
         synchronized (this) {
             priority = mPriority;
             name = mName;
@@ -129,6 +134,7 @@ public class Profile extends TwinmeRepositoryObject {
             twincodeOutbound = mTwincodeOutbound;
             twincodeInbound = mTwincodeInbound;
             space = mSpace;
+            settings = export();
         }
 
         List<AttributeNameValue> attributes = new ArrayList<>();
@@ -136,6 +142,9 @@ public class Profile extends TwinmeRepositoryObject {
             exportAttributes(attributes, name, description, space, twincodeInbound, twincodeOutbound);
         }
         attributes.add(new AttributeNameLongValue("priority", priority));
+        if (settings != null) {
+            attributes.add(settings);
+        }
 
         return attributes;
     }
@@ -216,14 +225,8 @@ public class Profile extends TwinmeRepositoryObject {
             twincodeOutbound = mTwincodeOutbound;
         }
 
-        boolean invariant = (twincodeInboundId == null && twincodeOutbound == null) ||
+        return (twincodeInboundId == null && twincodeOutbound == null) ||
                 (twincodeInboundId != null && twincodeOutbound != null);
-        if (!invariant) {
-
-            return false;
-        }
-
-        return invariant;
     }
 
     @Override

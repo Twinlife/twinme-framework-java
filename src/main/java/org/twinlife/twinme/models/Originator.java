@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2018-2025 twinlife SA.
+ *  Copyright (c) 2018-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -15,6 +15,7 @@ import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.RepositoryObject;
+import org.twinlife.twinme.TwinmeContext;
 
 import java.util.UUID;
 
@@ -55,7 +56,8 @@ public interface Originator extends RepositoryObject {
 
     @NonNull
     default String getDescription(){
-        return getIdentityDescription();
+        String identityDescription = getIdentityDescription();
+        return identityDescription == null ? "" : identityDescription;
     }
 
     @Nullable
@@ -109,5 +111,30 @@ public interface Originator extends RepositoryObject {
 
     default String getShortcutId() {
         return getType() + "_" + getId();
+    }
+
+    /**
+     * Get a subject property identified by the name.
+     * @param name the property name.
+     * @param defaultValue the default value when the property is not found .
+     * @return the subject property value or the default value.
+     */
+    @NonNull
+    String getString(@NonNull String name, @NonNull String defaultValue);
+    long getLong(@NonNull String name, long defaultValue);
+    boolean getBoolean(@NonNull String name, boolean defaultValue);
+
+    /**
+     * Set the subject property to the given value and save the subject properties locally in the database.
+     * @param name the property name.
+     * @param value the value to update.
+     * @param twinmeContext the twinme context to access the repository service.
+     */
+    void putString(@NonNull String name, @NonNull String value, @NonNull TwinmeContext twinmeContext);
+    default void putBoolean(@NonNull String name, @NonNull Boolean value, @NonNull TwinmeContext twinmeContext) {
+        putString(name, value ? "1" : "0", twinmeContext);
+    }
+    default void putLong(@NonNull String name, long value, @NonNull TwinmeContext twinmeContext) {
+        putString(name, String.valueOf(value), twinmeContext);
     }
 }

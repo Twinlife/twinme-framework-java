@@ -524,10 +524,10 @@ public interface TwinmeContext extends TwinlifeContext {
     void deleteAnnotation(@NonNull DescriptorId descriptorId, @NonNull ConversationService.AnnotationType type);
 
     void toggleAnnotation(@NonNull DescriptorId descriptorId,
-                          @NonNull ConversationService.AnnotationType type, int value);
+                          @NonNull ConversationService.AnnotationType type, long value);
 
     void listAnnotations(@NonNull DescriptorId descriptorId,
-                         @NonNull ConsumerWithError<Map<TwincodeOutbound, DescriptorAnnotation>>consumer);
+                         @NonNull ConsumerWithError<Map<TwincodeOutbound, List<DescriptorAnnotation>>>consumer);
 
     void getDescriptor(@NonNull DescriptorId descriptorId, @NonNull ConsumerWithError<Descriptor> consumer);
 
@@ -578,7 +578,6 @@ public interface TwinmeContext extends TwinlifeContext {
 
     void createCallReceiver(long requestId, @NonNull Space space, @Nullable String name,
                             @Nullable String description,
-                            @Nullable String identityName, @Nullable String identityDescription,
                             @Nullable Bitmap avatar, @Nullable File avatarFile,
                             @Nullable Capabilities capabilities, @NonNull Consumer<CallReceiver> consumer);
 
@@ -587,12 +586,16 @@ public interface TwinmeContext extends TwinlifeContext {
     void findCallReceivers(@NonNull Filter<RepositoryObject> filter, @NonNull Consumer<List<CallReceiver>> consumer);
 
     void deleteCallReceiver(long requestId, @NonNull CallReceiver callReceiver);
+    void deleteCallReceiver(long requestId, @NonNull CallReceiver callReceiver, @Nullable ConsumerWithError<UUID> consumer);
 
-    void updateCallReceiver(long requestId, @NonNull CallReceiver callReceiver, @NonNull String name, @Nullable String description, @NonNull String identityName,
-                            @Nullable String identityDescription, @Nullable Bitmap identityAvatar, @Nullable File identityAvatarFile,
-                            @Nullable Capabilities capabilities);
+    void updateCallReceiver(long requestId, @NonNull CallReceiver callReceiver, @NonNull String name, @Nullable String description,
+                            @Nullable Bitmap avatar, @Nullable File avatarFile, @Nullable Capabilities capabilities);
+
+    void updateOrganizer(long requestId, @NonNull CallReceiver callReceiver, String identityName,
+                            @Nullable String identityDescription, @Nullable Bitmap identityAvatar, @Nullable File identityAvatarFile);
 
     void changeCallReceiverTwincode(long requestId, @NonNull CallReceiver callReceiver);
+    void changeCallReceiverTwincode(long requestId, @NonNull CallReceiver callReceiver, @Nullable ConsumerWithError<CallReceiver> consumer);
 
     //
     // Notification management
