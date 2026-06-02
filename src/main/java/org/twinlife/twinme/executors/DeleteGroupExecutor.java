@@ -13,11 +13,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import android.util.Log;
 
+import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.ErrorCode;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
+import org.twinlife.twinlife.RosterId;
 import org.twinlife.twinlife.TwincodeInbound;
 import org.twinlife.twinlife.TwincodeOutbound;
+import org.twinlife.twinlife.util.Utils;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.models.Group;
 
@@ -45,12 +48,14 @@ public class DeleteGroupExecutor extends AbstractTimeoutTwinmeExecutor {
     private static final int DELETE_MEMBER_TWINCODE_DONE = 1 << 3;
     private static final int DELETE_IDENTITY_IMAGE = 1 << 4;
     private static final int DELETE_IDENTITY_IMAGE_DONE = 1 << 5;
-    private static final int DELETE_GROUP_TWINCODE = 1 << 6;
-    private static final int DELETE_GROUP_TWINCODE_DONE = 1 << 7;
-    private static final int DELETE_GROUP_IMAGE = 1 << 8;
-    private static final int DELETE_GROUP_IMAGE_DONE = 1 << 9;
-    private static final int DELETE_OBJECT = 1 << 10;
-    private static final int DELETE_OBJECT_DONE = 1 << 11;
+    private static final int DELETE_GROUP_ROSTER = 1 << 6;
+    private static final int DELETE_GROUP_ROSTER_DONE = 1 << 7;
+    private static final int DELETE_GROUP_TWINCODE = 1 << 8;
+    private static final int DELETE_GROUP_TWINCODE_DONE = 1 << 9;
+    private static final int DELETE_GROUP_IMAGE = 1 << 10;
+    private static final int DELETE_GROUP_IMAGE_DONE = 1 << 11;
+    private static final int DELETE_OBJECT = 1 << 12;
+    private static final int DELETE_OBJECT_DONE = 1 << 13;
 
     @NonNull
     private final Group mGroup;
@@ -65,6 +70,8 @@ public class DeleteGroupExecutor extends AbstractTimeoutTwinmeExecutor {
     private final UUID mMemberTwincodeFactoryId;
     @Nullable
     private final TwincodeOutbound mGroupTwincodeOutbound;
+    @Nullable
+    private final RosterId mRosterId;
 
     public DeleteGroupExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull Group group, long timeout) {
         super(twinmeContextImpl, requestId, LOG_TAG, timeout);
@@ -79,6 +86,7 @@ public class DeleteGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         mMemberTwincodeFactoryId = group.getMemberTwincodeFactoryId();
         mGroupTwincodeFactoryId = group.getGroupTwincodeFactoryId();
         mGroupTwincodeOutbound = group.getGroupTwincodeOutbound();
+        mRosterId = mGroupTwincodeFactoryId != null ? group.getSecureRosterId() : null;
     }
 
     @Override
@@ -96,6 +104,9 @@ public class DeleteGroupExecutor extends AbstractTimeoutTwinmeExecutor {
             }
             if ((mState & DELETE_IDENTITY_IMAGE) != 0 && (mState & DELETE_IDENTITY_IMAGE_DONE) == 0) {
                 mState &= ~DELETE_IDENTITY_IMAGE;
+            }
+            if ((mState & DELETE_GROUP_ROSTER) != 0 && (mState & DELETE_GROUP_ROSTER_DONE) == 0) {
+                mState &= ~DELETE_GROUP_ROSTER;
             }
             if ((mState & DELETE_GROUP_TWINCODE) != 0 && (mState & DELETE_GROUP_TWINCODE_DONE) == 0) {
                 mState &= ~DELETE_GROUP_TWINCODE;
@@ -180,10 +191,20 @@ public class DeleteGroupExecutor extends AbstractTimeoutTwinmeExecutor {
             }
         }
 
+        if (mRosterId != null) {
+            if ((mState & DELETE_GROUP_ROSTER) == 0) {
+                mState |= DELETE_GROUP_ROSTER;
+                mTwinmeContextImpl.getSecureRosterService().deleteRoster(mRosterId, this::onDeleteRoster);
+                return;
+            }
+            if ((mState & DELETE_GROUP_ROSTER_DONE) == 0) {
+                return;
+            }
+        }
+
         //
         // Step 3a: delete the group twincode.
         //
-
         if (mGroupTwincodeFactoryId != null) {
             if ((mState & DELETE_GROUP_TWINCODE) == 0) {
                 mState |= DELETE_GROUP_TWINCODE;
@@ -301,6 +322,21 @@ public class DeleteGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         mTwinmeContextImpl.assertEqual(ExecutorAssertPoint.INVALID_FACTORY_ID, twincodeFactoryId, mGroup.getGroupTwincodeFactoryId());
 
         mState |= DELETE_GROUP_TWINCODE_DONE;
+        onOperation();
+    }
+
+    private void onDeleteRoster(@NonNull ErrorCode errorCode, @Nullable Void unused) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onDeleteRoster: errorCode=" + errorCode);
+        }
+
+        // Wait for reconnection
+        if (errorCode == BaseService.ErrorCode.TWINLIFE_OFFLINE || errorCode == ErrorCode.TIMEOUT_ERROR) {
+            mRestarted = true;
+            return;
+        }
+
+        mState |= DELETE_GROUP_ROSTER_DONE;
         onOperation();
     }
 

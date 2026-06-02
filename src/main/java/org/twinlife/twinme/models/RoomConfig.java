@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2021 twinlife SA.
+ *  Copyright (c) 2021-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -10,9 +10,12 @@ package org.twinlife.twinme.models;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import org.twinlife.twinlife.CryptoService;
 import org.twinlife.twinlife.Decoder;
 import org.twinlife.twinlife.Encoder;
 import org.twinlife.twinlife.SerializerException;
+import org.twinlife.twinlife.TwincodeURI;
 
 import java.util.UUID;
 
@@ -73,17 +76,45 @@ public class RoomConfig {
                     encoder.writeEnum(1);
                     break;
             }
-            if (config.getInvitationTwincode() == null) {
+            final TwincodeURI twincodeURI = config.getInvitationURI();
+            if (twincodeURI == null || twincodeURI.twincodeId == null) {
                 encoder.writeEnum(0);
             } else {
                 encoder.writeEnum(1);
-                encoder.writeUUID(config.getInvitationTwincode());
+                encoder.writeUUID(twincodeURI.twincodeId);
             }
             if (config.getWelcome() == null) {
                 encoder.writeEnum(0);
             } else {
                 encoder.writeEnum(1);
                 encoder.writeString(config.getWelcome());
+            }
+
+            // 2025-08-29: RoomConfig extended format: we add the optional invitation public key.
+            encoder.writeEnum(1);
+            if (twincodeURI == null || twincodeURI.pubKey == null) {
+                encoder.writeEnum(0);
+            } else {
+                encoder.writeEnum(1);
+                encoder.writeString(twincodeURI.pubKey.asString());
+            }
+            if (twincodeURI == null) {
+                encoder.writeEnum(0);
+            } else {
+                encoder.writeEnum(1);
+                encoder.writeString(twincodeURI.uri);
+            }
+            if (twincodeURI == null || twincodeURI.twincodeOptions == null) {
+                encoder.writeEnum(0);
+            } else {
+                encoder.writeEnum(1);
+                encoder.writeString(twincodeURI.twincodeOptions);
+            }
+            if (twincodeURI == null) {
+                encoder.writeEnum(0);
+            } else {
+                encoder.writeEnum(1);
+                encoder.writeString(twincodeURI.label);
             }
 
             // Finish with a 0 so that we can more easily extend the RoomConfig object.
@@ -95,9 +126,6 @@ public class RoomConfig {
 
             ChatMode chatMode;
             switch (decoder.readEnum()) {
-                case 0:
-                    chatMode = ChatMode.CHAT_PUBLIC;
-                    break;
 
                 case 1:
                     chatMode = ChatMode.CHAT_CHANNEL;
@@ -107,6 +135,7 @@ public class RoomConfig {
                     chatMode = ChatMode.CHAT_FEEDBACK;
                     break;
 
+                case 0:
                 default:
                     chatMode = ChatMode.CHAT_PUBLIC;
                     break;
@@ -114,9 +143,6 @@ public class RoomConfig {
 
             CallMode callMode;
             switch (decoder.readEnum()) {
-                case 0:
-                    callMode = CallMode.CALL_DISABLED;
-                    break;
 
                 case 1:
                     callMode = CallMode.CALL_AUDIO;
@@ -126,6 +152,7 @@ public class RoomConfig {
                     callMode = CallMode.CALL_VIDEO;
                     break;
 
+                case 0:
                 default:
                     callMode = CallMode.CALL_DISABLED;
                     break;
@@ -133,9 +160,6 @@ public class RoomConfig {
 
             NotificationMode notificationMode;
             switch (decoder.readEnum()) {
-                case 0:
-                    notificationMode = NotificationMode.QUIET;
-                    break;
 
                 case 1:
                     notificationMode = NotificationMode.INFORM;
@@ -145,6 +169,7 @@ public class RoomConfig {
                     notificationMode = NotificationMode.NOISY;
                     break;
 
+                case 0:
                 default:
                     notificationMode = NotificationMode.QUIET;
                     break;
@@ -152,14 +177,12 @@ public class RoomConfig {
 
             InvitationMode invitationMode;
             switch (decoder.readEnum()) {
-                case 0:
-                    invitationMode = InvitationMode.INVITE_PUBLIC;
-                    break;
 
                 case 1:
                     invitationMode = InvitationMode.INVITE_ADMIN;
                     break;
 
+                case 0:
                 default:
                     invitationMode = InvitationMode.INVITE_PUBLIC;
                     break;
@@ -178,13 +201,33 @@ public class RoomConfig {
                 welcome = decoder.readString();
             }
 
-            // If we add information in RoomConfig, we can extract it with.  It is ignored otherwise.
-            int unused = decoder.readEnum();
-            // if (decoder.readEnum() != 0) {
-            //
-            // }
+            // 2025-08-29: check if we have the RoomConfig format with public key.
+            String invitationPublicKey = null;
+            String twincodeOptions = null;
+            String uri = null;
+            String label = null;
+            if (decoder.readEnum() != 0) {
+                invitationPublicKey = decoder.readOptionalString();
+                uri = decoder.readOptionalString();
+                twincodeOptions = decoder.readOptionalString();
+                label = decoder.readOptionalString();
+                decoder.readEnum();
 
-            return new RoomConfig(welcome, chatMode, callMode, notificationMode, invitationMode, invitationTwincodeId);
+                // If we add information in RoomConfig, we can extract it with.  It is ignored otherwise.
+                // if (decoder.readEnum() != 0) {
+                //
+                // }
+            }
+
+            final TwincodeURI twincodeURI;
+            if (invitationTwincodeId != null && uri != null && label != null) {
+                twincodeURI = new TwincodeURI(TwincodeURI.Kind.Invitation, invitationTwincodeId,
+                        twincodeOptions, CryptoService.PublicKeyData.create(invitationPublicKey), uri, label);
+            } else {
+                twincodeURI = null;
+            }
+
+            return new RoomConfig(welcome, chatMode, callMode, notificationMode, invitationMode, twincodeURI);
         }
     }
 
@@ -238,14 +281,14 @@ public class RoomConfig {
     @NonNull
     private NotificationMode mNotificationMode;
     @Nullable
-    private final UUID mInvitationTwincode;
+    private final TwincodeURI mInvitationTwincode;
     @NonNull
     private InvitationMode mInvitationMode;
 
     public RoomConfig(@Nullable String welcome, @NonNull ChatMode chatMode,
                       @NonNull CallMode callMode, @NonNull NotificationMode notificationMode,
                       @NonNull InvitationMode invitationMode,
-                      @Nullable UUID invitationTwincode) {
+                      @Nullable TwincodeURI invitationTwincode) {
         this.mWelcome = welcome;
         this.mCallMode = callMode;
         this.mChatMode = chatMode;
@@ -337,13 +380,23 @@ public class RoomConfig {
 
     /**
      * Get the invitation twincode for the twinroom.
-     *
      * The result can be null if the user is not allowed to invite other members in the twinroom.
      *
      * @return the twincode id or null.
      */
     @Nullable
     public UUID getInvitationTwincode() {
+
+        return mInvitationTwincode == null ? null : mInvitationTwincode.twincodeId;
+    }
+
+    public String getInvitationLink() {
+
+        return mInvitationTwincode == null ? null : mInvitationTwincode.uri;
+    }
+
+    @Nullable
+    public TwincodeURI getInvitationURI() {
 
         return mInvitationTwincode;
     }

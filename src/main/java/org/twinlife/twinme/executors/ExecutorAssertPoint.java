@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2025 twinlife SA.
+ *  Copyright (c) 2025-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -32,7 +32,10 @@ public enum ExecutorAssertPoint implements AssertPoint {
     PROCESS_PUSH_FILE_IQ,
     PROCESS_UPDATE_DESCRIPTOR_IQ,
     SEND_ERROR_IQ,
-    ON_DATA_CHANNEL_IQ;
+    ON_DATA_CHANNEL_IQ,
+
+    UPGRADE_GROUP_NO_PUBLIC_KEY,
+    UPGRADE_GROUP_ERROR;
 
     public int getIdentifier() {
 

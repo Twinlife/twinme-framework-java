@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2014-2024 twinlife SA.
+ *  Copyright (c) 2014-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -23,6 +23,7 @@ import org.twinlife.twinlife.ConversationService.DescriptorId;
 import org.twinlife.twinlife.ConversationService.DescriptorAnnotation;
 import org.twinlife.twinlife.ConversationService.Conversation;
 import org.twinlife.twinlife.ConversationService.GroupConversation;
+import org.twinlife.twinlife.CryptoService;
 import org.twinlife.twinlife.DisplayCallsMode;
 import org.twinlife.twinlife.Filter;
 import org.twinlife.twinlife.ImageId;
@@ -100,7 +101,7 @@ public interface TwinmeContext extends TwinlifeContext {
 
         void onCreateInvitationWithCode(long requestId, @NonNull Invitation invitation);
 
-        void onGetInvitationCode(long requestId, @NonNull TwincodeOutbound twincodeOutbound, @Nullable String publicKey);
+        void onGetInvitationCode(long requestId, @NonNull TwincodeOutbound twincodeOutbound, @Nullable CryptoService.PublicKeyData publicKey);
 
         void onCreateGroup(long requestId, @NonNull Group group, @NonNull GroupConversation conversation);
 
@@ -200,7 +201,7 @@ public interface TwinmeContext extends TwinlifeContext {
         }
 
         @Override
-        public void onGetInvitationCode(long requestId, @NonNull TwincodeOutbound twincodeOutbound, @Nullable String publicKey) {
+        public void onGetInvitationCode(long requestId, @NonNull TwincodeOutbound twincodeOutbound, @Nullable CryptoService.PublicKeyData publicKey) {
         }
 
         @Override
@@ -507,7 +508,7 @@ public interface TwinmeContext extends TwinlifeContext {
 
     void pushGeolocation(long requestId, @NonNull Conversation conversation, @Nullable UUID sendTo,
                          @Nullable DescriptorId replyTo, double longitude, double latitude, double altitude,
-                         double mapLongitudeDelta, double mapLatitudeDelta, @Nullable Uri localMapPath, long expiration);
+                         double mapLongitudeDelta, double mapLatitudeDelta, @Nullable Uri localMapPath, long expiration, boolean copyAllowed);
 
     void updateGeolocation(long requestId, @NonNull Conversation conversation, @NonNull DescriptorId descriptorId,
                            double longitude, double latitude, double altitude,
@@ -517,11 +518,18 @@ public interface TwinmeContext extends TwinlifeContext {
                             @Nullable Uri localMapPath);
 
     void pushTwincode(long requestId, @NonNull Conversation conversation, @Nullable UUID sendTo, @Nullable DescriptorId replyTo,
-                      @NonNull UUID twincodeId, @NonNull UUID schemaId, @Nullable String publicKey, boolean copyAllowed, long expiration);
+                      @NonNull UUID twincodeId, @NonNull UUID schemaId, @Nullable CryptoService.PublicKeyData publicKey,
+                      boolean copyAllowed, long expiration);
+
+    void pushPoll(long requestId, @NonNull Conversation conversation, @Nullable UUID sendTo, boolean multipleAnswersAllowed,
+                  @NonNull String question, @NonNull List<ConversationService.PollDescriptor.Choice> choices, boolean copyAllowed, long expiration);
 
     void withdrawInviteGroup(long requestId, @NonNull ConversationService.InvitationDescriptor descriptor);
 
     void deleteAnnotation(@NonNull DescriptorId descriptorId, @NonNull ConversationService.AnnotationType type);
+
+    void setAnnotation(@NonNull DescriptorId descriptorId,
+                       @NonNull ConversationService.AnnotationType type, long value);
 
     void toggleAnnotation(@NonNull DescriptorId descriptorId,
                           @NonNull ConversationService.AnnotationType type, long value);
@@ -612,7 +620,7 @@ public interface TwinmeContext extends TwinlifeContext {
     Notification createNotification(@NonNull NotificationService.NotificationType notificationType,
                                     int notificationId, @NonNull Originator subject,
                                     @Nullable DescriptorId descriptorId,
-                                    @Nullable TwincodeOutbound annotatingUser);
+                                    @Nullable TwincodeOutbound annotatingUser, @Nullable DescriptorAnnotation annotation);
 
     void acknowledgeNotification(long requestId, @NonNull Notification notification);
 

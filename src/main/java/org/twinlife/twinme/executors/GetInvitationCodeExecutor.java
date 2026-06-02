@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.CryptoService;
 import org.twinlife.twinlife.TwincodeOutbound;
 import org.twinlife.twinme.TwinmeContextImpl;
 
@@ -38,7 +39,7 @@ public class GetInvitationCodeExecutor extends AbstractTimeoutTwinmeExecutor {
     private TwincodeOutbound mTwincodeOutbound = null;
 
     @Nullable
-    private String mPublicKey = null;
+    private CryptoService.PublicKeyData mPublicKey = null;
 
     public GetInvitationCodeExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull String code) {
         super(twinmeContextImpl, requestId, LOG_TAG, DEFAULT_TIMEOUT);

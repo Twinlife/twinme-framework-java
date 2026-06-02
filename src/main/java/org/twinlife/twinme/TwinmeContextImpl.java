@@ -31,6 +31,7 @@ import org.twinlife.twinlife.ConversationService.DescriptorAnnotation;
 import org.twinlife.twinlife.ConversationService.DescriptorId;
 import org.twinlife.twinlife.ConversationService.GroupConversation;
 import org.twinlife.twinlife.ConversationService.UpdateType;
+import org.twinlife.twinlife.CryptoService;
 import org.twinlife.twinlife.DisplayCallsMode;
 import org.twinlife.twinlife.Filter;
 import org.twinlife.twinlife.ImageId;
@@ -54,6 +55,7 @@ import org.twinlife.twinlife.TwincodeURI;
 import org.twinlife.twinlife.TwinlifeContext;
 import org.twinlife.twinlife.TwinlifeContextImpl;
 import org.twinlife.twinlife.TwinlifeImpl;
+import org.twinlife.twinlife.conversation.PollDescriptorImpl;
 import org.twinlife.twinlife.util.BinaryDecoder;
 import org.twinlife.twinlife.util.EventMonitor;
 import org.twinlife.twinlife.util.Logger;
@@ -129,6 +131,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -181,13 +184,14 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
         @Override
         public void onUpdateAnnotation(long requestId, @NonNull Conversation conversation, @NonNull Descriptor descriptor,
-                                       @NonNull TwincodeOutbound annotatingUser) {
+                                       @NonNull TwincodeOutbound annotatingUser, @NonNull Set<DescriptorAnnotation> updatedAnnotations) {
             if (DEBUG) {
                 Log.d(LOG_TAG, "ConversationServiceObserver.onUpdateAnnotation: requestId=" + requestId
-                        + " conversation=" + conversation + " descriptor=" + descriptor + " annotatingUser=" + annotatingUser);
+                        + " conversation=" + conversation + " descriptor=" + descriptor + " annotatingUser=" + annotatingUser
+                        + " updatedTypes=" + updatedAnnotations);
             }
 
-            TwinmeContextImpl.this.onUpdateAnnotation(conversation, descriptor, annotatingUser);
+            TwinmeContextImpl.this.onUpdateAnnotation(conversation, descriptor, annotatingUser, updatedAnnotations);
         }
 
         @Override
@@ -271,6 +275,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
     private final NotificationServiceObserver mNotificationServiceObserver;
     private final RelationOrchestrator mRelationOrchestrator;
     private final ConferenceOrchestrator mConferenceOrchestrator;
+    private final SecureRosterOrchestrator mSecureRosterOrchestrator;
     private final boolean mEnableSpaces;
     private final TreeSet<TwinmeAction> mPendingActions;
     private TwinmeAction mFirstAction;
@@ -305,6 +310,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         mNotificationServiceObserver = new NotificationServiceObserver();
         mRelationOrchestrator = new RelationOrchestrator(this, mTwinlifeExecutor);
         mConferenceOrchestrator = new ConferenceOrchestrator(this, mTwinlifeExecutor);
+        mSecureRosterOrchestrator = new SecureRosterOrchestrator(this, mTwinlifeExecutor);
 
         mPendingActions = new TreeSet<>();
 
@@ -330,6 +336,14 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         synchronized (this) {
             return mHasProfiles && !mHasSpaces;
         }
+    }
+
+    public void finishMigration(@NonNull String name) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "finishMigration: name=" + name);
+        }
+
+        mTwinlifeImpl.finishMigration(name);
     }
 
     //
@@ -1119,7 +1133,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         mTwinlifeExecutor.execute(executor::start);
     }
 
-    public void onGetInvitationCode(long requestId, @NonNull TwincodeOutbound twincodeOutbound, @Nullable String publicKey) {
+    public void onGetInvitationCode(long requestId, @NonNull TwincodeOutbound twincodeOutbound, @Nullable CryptoService.PublicKeyData publicKey) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onGetInvitationCode: requestId=" + requestId + " twincodeOutbound=" + twincodeOutbound + " publicKey=" + publicKey);
         }
@@ -2162,13 +2176,13 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
     @Override
     public void pushGeolocation(long requestId, @NonNull Conversation conversation, @Nullable UUID sendTo,
                          @Nullable ConversationService.DescriptorId replyTo, double longitude, double latitude, double altitude,
-                         double mapLongitudeDelta, double mapLatitudeDelta, @Nullable Uri localMapPath, long expiration) {
+                         double mapLongitudeDelta, double mapLatitudeDelta, @Nullable Uri localMapPath, long expiration, boolean copyAllowed) {
         if (DEBUG) {
             Log.d(LOG_TAG, "pushGeolocation: requestId=" + requestId + " conversation=" + conversation);
         }
 
         mTwinlifeExecutor.execute(() -> getConversationService().pushGeolocation(requestId, conversation, sendTo, replyTo, longitude, latitude,
-                altitude, mapLongitudeDelta, mapLatitudeDelta, localMapPath, expiration));
+                altitude, mapLongitudeDelta, mapLatitudeDelta, localMapPath, expiration, copyAllowed));
     }
 
     @Override
@@ -2195,13 +2209,22 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
     @Override
     public void pushTwincode(long requestId, @NonNull Conversation conversation, @Nullable UUID sendTo, @Nullable ConversationService.DescriptorId replyTo,
-                      @NonNull UUID twincodeId, @NonNull UUID schemaId, @Nullable String publicKey, boolean copyAllowed, long expiration) {
+                             @NonNull UUID twincodeId, @NonNull UUID schemaId, @Nullable CryptoService.PublicKeyData publicKey, boolean copyAllowed, long expiration) {
         if (DEBUG) {
             Log.d(LOG_TAG, "pushTwincode: requestId=" + requestId + " conversation=" + conversation);
         }
 
         mTwinlifeExecutor.execute(() -> getConversationService().pushTwincode(requestId, conversation, sendTo, replyTo,
                 twincodeId, schemaId, publicKey, copyAllowed, expiration));
+    }
+
+    @Override
+    public void pushPoll(long requestId, @NonNull Conversation conversation, @Nullable UUID sendTo, boolean multipleAnswersAllowed, @NonNull String question, @NonNull List<ConversationService.PollDescriptor.Choice> choices, boolean copyAllowed, long expiration) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "pushPoll: requestId=" + requestId + " conversation=" + conversation + " sendTo=" + sendTo + " multipleAnswersAllowed=" + multipleAnswersAllowed + " question=" + question + " choices=" + choices);
+        }
+
+        mTwinlifeExecutor.execute(() -> getConversationService().pushPoll(requestId, conversation, multipleAnswersAllowed, question, choices, copyAllowed, expiration));
     }
 
     @Override
@@ -2220,6 +2243,36 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         }
 
         mTwinlifeExecutor.execute(() -> getConversationService().deleteAnnotation(descriptorId, type));
+    }
+
+    @Override
+    public void setAnnotation(@NonNull DescriptorId descriptorId, @NonNull ConversationService.AnnotationType type, long value) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "setAnnotation: descriptorId=" + descriptorId + " type=" + type + " value=" + value);
+        }
+
+        mTwinlifeExecutor.execute(() ->
+        {
+            if (type == ConversationService.AnnotationType.POLL) {
+                Descriptor descriptor = getConversationService().getDescriptor(descriptorId);
+
+                if (!(descriptor instanceof PollDescriptorImpl)) {
+                    Log.e(LOG_TAG, "Can't vote on non-poll descriptor " + descriptor);
+                    return;
+                }
+
+                PollDescriptorImpl pollDescriptor = (PollDescriptorImpl) descriptor;
+                if (!pollDescriptor.isMultipleChoicesAllowed()) {
+                    int nbChoices = ConversationService.PollDescriptor.Choice.fromAnnotationValue(value, pollDescriptor.getChoices()).size();
+                    if (nbChoices > 1) {
+                        Log.e(LOG_TAG, "Poll " + descriptorId + " is single-choice but " + nbChoices + " choices submitted.");
+                        return;
+                    }
+                }
+            }
+
+            getConversationService().setAnnotation(descriptorId, type, value);
+        });
     }
 
     @Override
@@ -2710,10 +2763,10 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
     }
 
     @Override
-    public Notification  createNotification(@NonNull NotificationService.NotificationType notificationType,
+    public Notification createNotification(@NonNull NotificationType notificationType,
                                             int notificationId, @NonNull Originator subject,
                                             @Nullable DescriptorId descriptorId,
-                                            @Nullable TwincodeOutbound annotatingUser) {
+                                           @Nullable TwincodeOutbound annotatingUser, @Nullable DescriptorAnnotation annotation) {
         if (DEBUG) {
             Log.d(LOG_TAG, "createNotification: notificationType=" + notificationType + " subject=" + subject
                     + " descriptorId=" + descriptorId + " annotatingUser=" + annotatingUser);
@@ -2729,7 +2782,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             subject = ((GroupMember) subject).getGroup();
         }
         Notification notification = notificationService.createNotification(notificationId, notificationType,
-                subject, descriptorId, annotatingUser);
+                subject, descriptorId, annotatingUser, annotation);
 
         if (notification != null) {
             Iterator<TwinlifeContext.Observer> iterator = observersIterator();
@@ -3098,6 +3151,14 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         mNotificationCenter.removeAllDynamicShortcuts();
     }
 
+    boolean needMigration(@NonNull String tag) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "needMigration tag=" + tag);
+        }
+
+        return mTwinlifeImpl.needMigration(tag);
+    }
+
     private void actionTimeoutJob() {
         if (DEBUG) {
             Log.d(LOG_TAG, "actionTimeoutJob");
@@ -3176,6 +3237,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
         mRelationOrchestrator.onTwinlifeReady();
         mConferenceOrchestrator.onTwinlifeReady();
+        mSecureRosterOrchestrator.onTwinlifeReady();
 
         getNotificationService().addServiceObserver(mNotificationServiceObserver);
 
@@ -3486,7 +3548,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
                 getPeerConnectionService().terminatePeerConnection(peerConnectionId, TerminateReason.BUSY);
 
                 NotificationType notificationType = offer.video ? NotificationType.MISSED_VIDEO_CALL : NotificationType.MISSED_AUDIO_CALL;
-                createNotification(notificationType, 0 /* Notification.NO_NOTIFICATION_ID*/, originator, null, null);
+                createNotification(notificationType, 0 /* Notification.NO_NOTIFICATION_ID*/, originator, null, null, null);
             }
         } else {
             getPeerConnectionService().terminatePeerConnection(peerConnectionId, TerminateReason.GENERAL_ERROR);
@@ -3732,7 +3794,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
                     break;
             }
             if (notificationType != null) {
-                createNotification(notificationType, 0 /* Notification.NO_NOTIFICATION_ID,*/, originator, descriptor.getDescriptorId(), null);
+                createNotification(notificationType, 0 /* Notification.NO_NOTIFICATION_ID,*/, originator, descriptor.getDescriptorId(), null, null);
             }
         }
     }
@@ -3834,13 +3896,13 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             }
             if (notificationType != null) {
                 createNotification(notificationType, 0 /* Notification.NO_NOTIFICATION_ID*/, originator,
-                        descriptor.getDescriptorId(), null);
+                        descriptor.getDescriptorId(), null, null);
             }
         }
     }
 
     private void onUpdateAnnotation(@NonNull Conversation conversation, @NonNull Descriptor descriptor,
-                                    @NonNull TwincodeOutbound annotatingUser) {
+                                    @NonNull TwincodeOutbound annotatingUser, @NonNull Set<DescriptorAnnotation> updatedAnnotations) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onUpdateAnnotation: conversation=" + conversation + " descriptor=" + descriptor
                     + " annotatingUser=" + annotatingUser + " annotatingUser=" + annotatingUser);
@@ -3852,17 +3914,17 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         }
 
         if (conversation.isGroup() || !annotatingUser.getId().equals(conversation.getPeerTwincodeOutboundId())) {
-            getGroupMember((Originator) conversation.getSubject(), annotatingUser.getId(), (ErrorCode status, GroupMember groupMember) -> onUpdateAnnotation(status, groupMember, conversation, descriptor, annotatingUser));
+            getGroupMember((Originator) conversation.getSubject(), annotatingUser.getId(), (ErrorCode status, GroupMember groupMember) -> onUpdateAnnotation(status, groupMember, conversation, descriptor, annotatingUser, updatedAnnotations));
         } else {
-            onUpdateAnnotation(ErrorCode.SUCCESS, conversation.getSubject(), conversation, descriptor, annotatingUser);
+            onUpdateAnnotation(ErrorCode.SUCCESS, conversation.getSubject(), conversation, descriptor, annotatingUser, updatedAnnotations);
         }
     }
 
     private void onUpdateAnnotation(@NonNull ErrorCode status, @Nullable RepositoryObject receiver, @NonNull Conversation conversation,
-                                    @NonNull Descriptor descriptor, @NonNull TwincodeOutbound annotatingUser) {
+                                    @NonNull Descriptor descriptor, @NonNull TwincodeOutbound annotatingUser, @NonNull Set<DescriptorAnnotation> updatedAnnotations) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onUpdateAnnotation: status=" + status + " receiver=" + receiver
-                    + " conversation=" + conversation + " descriptor=" + descriptor + " annotatingUser=" + annotatingUser);
+                    + " conversation=" + conversation + " descriptor=" + descriptor + " annotatingUser=" + annotatingUser + " updatedAnnotations=" + updatedAnnotations);
         }
 
         if (status != ErrorCode.SUCCESS || receiver == null) {
@@ -3877,10 +3939,12 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
 
         Originator originator = (Originator) receiver;
         if (isVisible(originator)) {
-            mNotificationCenter.onUpdateAnnotation(originator, conversation, descriptor, annotatingUser);
+            mNotificationCenter.onUpdateAnnotations(originator, conversation, descriptor, annotatingUser, updatedAnnotations);
         } else {
-            createNotification(NotificationType.UPDATED_ANNOTATION, 0 /* Notification.NO_NOTIFICATION_ID*/, originator,
-                    descriptor.getDescriptorId(), annotatingUser);
+            for (DescriptorAnnotation annotation : updatedAnnotations) {
+                createNotification(NotificationType.UPDATED_ANNOTATION, 0 /* Notification.NO_NOTIFICATION_ID*/, originator,
+                        descriptor.getDescriptorId(), annotatingUser, annotation);
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2018-2024 twinlife SA.
+ *  Copyright (c) 2018-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -24,6 +24,8 @@ import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryService;
+import org.twinlife.twinlife.Permission;
+import org.twinlife.twinlife.RosterId;
 import org.twinlife.twinlife.TrustMethod;
 import org.twinlife.twinlife.TwincodeFactory;
 import org.twinlife.twinlife.TwincodeOutboundService;
@@ -47,7 +49,7 @@ import java.util.UUID;
 // All observers are running in the SingleThreadExecutor provided by the twinlife library
 // All observers are reachable (not eligible for garbage collection) between start() and stop() calls
 //
-// version: 1.10
+// version: 1.11
 //
 // User foreground operation: must be connected with a timeout if connection does not work.
 
@@ -57,6 +59,7 @@ import java.util.UUID;
  * - get the group member twincode outbound,
  * - create the group twincode with the group name, the group member twincode and group avatar (optional),
  * - get the group twincode outbound,
+ * - create the secure roster if we create the group twincode, configure the secure roster with public key,
  * - create the group local object in the repository,
  * - create the group conversation object in the conversation service.
  * The step4 (create the group twincode) is optional and is not made when a user joins the group.
@@ -76,18 +79,26 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
     private static final int CREATE_MEMBER_TWINCODE_DONE = 1 << 6;
     private static final int CREATE_GROUP_TWINCODE = 1 << 7;
     private static final int CREATE_GROUP_TWINCODE_DONE = 1 << 8;
-    private static final int GET_GROUP_TWINCODE_OUTBOUND = 1 << 9;
-    private static final int GET_GROUP_TWINCODE_OUTBOUND_DONE = 1 << 10;
-    private static final int GET_GROUP_IMAGE = 1 << 11;
-    private static final int GET_GROUP_IMAGE_DONE = 1 << 12;
-    private static final int CREATE_GROUP_OBJECT = 1 << 13;
-    private static final int CREATE_GROUP_OBJECT_DONE = 1 << 14;
-    private static final int INVOKE_TWINCODE = 1 << 15;
-    private static final int INVOKE_TWINCODE_DONE = 1 << 16;
-    private static final int ACCEPT_INVITATION = 1 << 17;
-    private static final int ACCEPT_INVITATION_DONE = 1 << 18;
-    private static final int UPDATE_GROUP = 1 << 19;
-    private static final int UPDATE_GROUP_DONE = 1 << 20;
+    private static final int UPDATE_GROUP_TWINCODE = 1 << 9;
+    private static final int UPDATE_GROUP_TWINCODE_DONE = 1 << 10;
+    private static final int GET_GROUP_TWINCODE_OUTBOUND = 1 << 11;
+    private static final int GET_GROUP_TWINCODE_OUTBOUND_DONE = 1 << 12;
+    private static final int GET_GROUP_IMAGE = 1 << 13;
+    private static final int GET_GROUP_IMAGE_DONE = 1 << 14;
+    private static final int CREATE_ROSTER = 1 << 15;
+    private static final int CREATE_ROSTER_DONE = 1 << 16;
+    private static final int ADD_ROSTER_KEY = 1 << 17;
+    private static final int ADD_ROSTER_KEY_DONE = 1 << 18;
+    private static final int ADD_ROSTER_MEMBER = 1 << 19;
+    private static final int ADD_ROSTER_MEMBER_DONE = 1 << 20;
+    private static final int CREATE_GROUP_OBJECT = 1 << 21;
+    private static final int CREATE_GROUP_OBJECT_DONE = 1 << 22;
+    private static final int INVOKE_TWINCODE = 1 << 23;
+    private static final int INVOKE_TWINCODE_DONE = 1 << 24;
+    private static final int ACCEPT_INVITATION = 1 << 25;
+    private static final int ACCEPT_INVITATION_DONE = 1 << 26;
+    private static final int UPDATE_GROUP = 1 << 27;
+    private static final int UPDATE_GROUP_DONE = 1 << 28;
 
     @Nullable
     private TwincodeFactory mMemberTwincode;
@@ -118,6 +129,7 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
     @Nullable
     private final InvitationDescriptor mInvitation;
     private GroupConversation mConversation;
+    private RosterId mSecureRosterId;
 
     public CreateGroupExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull Space space,
                                @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile) {
@@ -232,6 +244,18 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
             }
             if ((mState & CREATE_GROUP_TWINCODE) != 0 && (mState & CREATE_GROUP_TWINCODE_DONE) == 0) {
                 mState &= ~CREATE_GROUP_TWINCODE;
+            }
+            if ((mState & UPDATE_GROUP_TWINCODE) != 0 && (mState & UPDATE_GROUP_TWINCODE_DONE) == 0) {
+                mState &= ~UPDATE_GROUP_TWINCODE;
+            }
+            if ((mState & CREATE_ROSTER) != 0 && (mState & CREATE_ROSTER_DONE) == 0) {
+                mState &= ~CREATE_ROSTER;
+            }
+            if ((mState & ADD_ROSTER_KEY) != 0 && (mState & ADD_ROSTER_KEY_DONE) == 0) {
+                mState &= ~ADD_ROSTER_KEY;
+            }
+            if ((mState & ADD_ROSTER_MEMBER) != 0 && (mState & ADD_ROSTER_MEMBER_DONE) == 0) {
+                mState &= ~ADD_ROSTER_MEMBER;
             }
             if ((mState & CREATE_MEMBER_TWINCODE) != 0 && (mState & CREATE_MEMBER_TWINCODE_DONE) == 0) {
                 mState &= ~CREATE_MEMBER_TWINCODE;
@@ -360,8 +384,9 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         //
         // Step 3: create the group twincode (unless we are joining a group).
         //
-
-        if (mGroupTwincodeId == null) {
+        // If we are owner of the group, setup the secure roster with the group public key as
+        // the primary key to sign other public keys and group members.
+        if (mIsOwner) {
 
             if ((mState & CREATE_GROUP_TWINCODE) == 0) {
                 mState |= CREATE_GROUP_TWINCODE;
@@ -370,6 +395,52 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
 
                 List<BaseService.AttributeNameValue> twincodeFactoryAttributes = new ArrayList<>();
                 PairProtocol.setTwincodeAttributePair(twincodeFactoryAttributes);
+
+                if (DEBUG) {
+                    Log.d(LOG_TAG, "TwincodeFactoryService.createTwincode: twincodeFactoryAttributes=" + twincodeFactoryAttributes
+                            + "twincodeInboundAttributes=null" + "twincodeOutboundAttributes=null");
+                }
+                mTwinmeContextImpl.getTwincodeFactoryService().createTwincode(twincodeFactoryAttributes, null,
+                        null, null, Group.SCHEMA_ID, this::onCreateGroupTwincode);
+                return;
+            }
+            if ((mState & CREATE_GROUP_TWINCODE_DONE) == 0) {
+                return;
+            }
+
+            if ((mState & CREATE_ROSTER) == 0) {
+                mState |= CREATE_ROSTER;
+                mTwinmeContextImpl.getSecureRosterService().createRoster(0, Group.SCHEMA_ID, mGroupTwincodeOutbound, this::onCreateRoster);
+                return;
+            }
+            if ((mState & CREATE_ROSTER_DONE) == 0) {
+                return;
+            }
+
+            if ((mState & ADD_ROSTER_KEY) == 0) {
+                mState |= ADD_ROSTER_KEY;
+                mTwinmeContextImpl.getSecureRosterService().setRosterPublicKey(mSecureRosterId, mGroupTwincodeOutbound, mGroupTwincodeOutbound, this::onSetRosterPublicKey);
+                return;
+            }
+            if ((mState & ADD_ROSTER_KEY_DONE) == 0) {
+                return;
+            }
+
+            if ((mState & ADD_ROSTER_MEMBER) == 0) {
+                mState |= ADD_ROSTER_MEMBER;
+                List<Permission> permissions = List.of(Permission.ALL_PERMISSIONS);
+                mTwinmeContextImpl.getSecureRosterService().addMember(mSecureRosterId, mGroupTwincodeOutbound, mMemberTwincodeOutbound, permissions, this::onAddMember);
+                return;
+            }
+            if ((mState & ADD_ROSTER_MEMBER_DONE) == 0) {
+                return;
+            }
+
+            // To configure the group twincode, we must have created the secure roster.
+            if ((mState & UPDATE_GROUP_TWINCODE) == 0) {
+                mState |= UPDATE_GROUP_TWINCODE;
+
+                mTwinmeContextImpl.assertNotNull(ExecutorAssertPoint.NULL_OBJECT, mName, 371);
 
                 List<BaseService.AttributeNameValue> twincodeOutboundAttributes = new ArrayList<>();
                 TwinmeAttributes.setTwincodeAttributeName(twincodeOutboundAttributes, mName);
@@ -381,18 +452,19 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
                     TwinmeAttributes.setTwincodeAttributeDescription(twincodeOutboundAttributes, mDescription);
                 }
                 TwinmeAttributes.setTwincodeAttributeCreatedBy(twincodeOutboundAttributes, mMemberTwincodeOutbound.getId());
+                TwinmeAttributes.setTwincodeAttributeRosterId(twincodeOutboundAttributes, mSecureRosterId);
 
                 if (DEBUG) {
-                    Log.d(LOG_TAG, "TwincodeFactoryService.createTwincode: twincodeFactoryAttributes=" + twincodeFactoryAttributes
-                            + "twincodeInboundAttributes=null" + "twincodeOutboundAttributes=" + twincodeOutboundAttributes);
+                    Log.d(LOG_TAG, "updateTwincode: twincodeOutboundAttributes=" + twincodeOutboundAttributes);
                 }
-                mTwinmeContextImpl.getTwincodeFactoryService().createTwincode(twincodeFactoryAttributes, null,
-                        twincodeOutboundAttributes, null, Group.SCHEMA_ID, this::onCreateGroupTwincode);
+                mTwinmeContextImpl.getTwincodeOutboundService().updateTwincode(mGroupTwincodeOutbound,
+                        twincodeOutboundAttributes, null, this::onUpdateGroupTwincode);
                 return;
             }
-            if ((mState & CREATE_GROUP_TWINCODE_DONE) == 0) {
+            if ((mState & UPDATE_GROUP_TWINCODE_DONE) == 0) {
                 return;
             }
+
         }
 
         //
@@ -591,9 +663,25 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
             return;
         }
 
-        mState |= CREATE_GROUP_TWINCODE_DONE;
+        mState |= CREATE_GROUP_TWINCODE_DONE | GET_GROUP_TWINCODE_OUTBOUND | GET_GROUP_TWINCODE_OUTBOUND_DONE;
         mGroupTwincodeFactory = twincodeFactory;
-        mGroupTwincodeId = twincodeFactory.getTwincodeOutbound().getId();
+        mGroupTwincodeOutbound = twincodeFactory.getTwincodeOutbound();
+        mGroupTwincodeId = mGroupTwincodeOutbound.getId();
+        onOperation();
+    }
+
+    private void onUpdateGroupTwincode(@NonNull ErrorCode errorCode, @Nullable TwincodeOutbound twincodeOutbound) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onUpdateGroupTwincode: errorCode=" + errorCode + " twincodeOutbound=" + twincodeOutbound);
+        }
+
+        if (errorCode != ErrorCode.SUCCESS || twincodeOutbound == null) {
+
+            onOperationError(UPDATE_GROUP_TWINCODE, errorCode, null);
+            return;
+        }
+
+        mState |= UPDATE_GROUP_TWINCODE_DONE;
         onOperation();
     }
 
@@ -631,6 +719,52 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
 
         mGroupTwincodeOutbound = twincodeOutbound;
         mGroupAvatarId = mGroupTwincodeOutbound.getAvatarId();
+        onOperation();
+    }
+
+    private void onCreateRoster(@NonNull ErrorCode errorCode, @Nullable RosterId rosterId) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onCreateRoster: errorCode=" + errorCode + " rosterId=" + rosterId);
+        }
+
+        if (errorCode != ErrorCode.SUCCESS || rosterId == null) {
+
+            onOperationError(CREATE_ROSTER, errorCode, null);
+            return;
+        }
+
+        mState |= CREATE_ROSTER_DONE;
+        mSecureRosterId = rosterId;
+        onOperation();
+    }
+
+    private void onSetRosterPublicKey(@NonNull ErrorCode errorCode, @Nullable Void unused) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onSetRosterPublicKey: errorCode=" + errorCode);
+        }
+
+        if (errorCode != ErrorCode.SUCCESS) {
+
+            onOperationError(ADD_ROSTER_KEY, errorCode, null);
+            return;
+        }
+
+        mState |= ADD_ROSTER_KEY_DONE;
+        onOperation();
+    }
+
+    private void onAddMember(@NonNull ErrorCode errorCode, @Nullable Void unused) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onAddMember: errorCode=" + errorCode);
+        }
+
+        if (errorCode != ErrorCode.SUCCESS) {
+
+            onOperationError(ADD_ROSTER_MEMBER, errorCode, null);
+            return;
+        }
+
+        mState |= ADD_ROSTER_MEMBER_DONE;
         onOperation();
     }
 
@@ -679,4 +813,20 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         mState |= INVOKE_TWINCODE_DONE;
         onOperation();
     }
+
+    protected void onOperationError(int operationId, BaseService.ErrorCode errorCode, @Nullable String errorParameter) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onError: operationId=" + operationId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
+        }
+
+        // Wait for reconnection
+        if (errorCode == BaseService.ErrorCode.TWINLIFE_OFFLINE) {
+            mRestarted = true;
+
+            return;
+        }
+
+        super.onOperationError(operationId, errorCode, errorParameter);
+    }
+
 }

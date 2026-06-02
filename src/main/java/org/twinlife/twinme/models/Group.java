@@ -5,6 +5,7 @@
  *  Contributors:
  *   Christian Jacquemot (Christian.Jacquemot@twinlife-systems.com)
  *   Stephane Carrez (Stephane.Carrez@twin.life)
+ *   Romain Kolb (romain.kolb@skyrock.com)
  */
 
 package org.twinlife.twinme.models;
@@ -20,10 +21,13 @@ import org.twinlife.twinlife.BuildConfig;
 import org.twinlife.twinlife.DatabaseIdentifier;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.RepositoryObject;
+import org.twinlife.twinlife.RosterId;
 import org.twinlife.twinlife.TwincodeFactory;
 import org.twinlife.twinlife.TwincodeInbound;
 import org.twinlife.twinlife.TwincodeOutbound;
+import org.twinlife.twinlife.conversation.GroupProtocol;
 import org.twinlife.twinlife.util.Utils;
+import org.twinlife.twinme.TwinmeContext;
 import org.twinlife.twinme.util.TwinmeAttributes;
 
 import java.util.ArrayList;
@@ -31,7 +35,7 @@ import java.util.List;
 import java.util.UUID;
 
 //
-// version: 1.3
+// version: 1.4
 //
 
 /*
@@ -51,8 +55,12 @@ import java.util.UUID;
 
 public class Group extends TwinmeRepositoryObject implements Originator {
 
-    public static final UUID SCHEMA_ID = UUID.fromString("a70f964c-7147-4825-afe2-d14da222f181");
+    public static final UUID SCHEMA_ID = GroupProtocol.ROSTER_SCHEMA_ID; // UUID.fromString("a70f964c-7147-4825-afe2-d14da222f181");
+    public static final UUID LEGACY_SCHEMA_ID = GroupProtocol.LEGACY_SCHEMA_ID;
     public static final int SCHEMA_VERSION = 1;
+    public static final String MAX_GROUP_MEMBERS = "maxGroupMembers";
+    public static final String REFRESH_TIME = "refreshTime";
+    public static final long REFRESH_DELAY = 24 * 3600 * 1000; // 24 hours in milliseconds
 
     @Nullable
     private UUID mGroupTwincodeFactoryId;
@@ -362,6 +370,16 @@ public class Group extends TwinmeRepositoryObject implements Originator {
         }
     }
 
+    /**
+     * Get the secure roster ID associated with the group. For a legacy group, there is no secure roster ID.
+     * @return null or the secure roster ID.
+     */
+    @Nullable
+    public synchronized RosterId getSecureRosterId() {
+
+        return GroupProtocol.getSecureRosterId(mGroupTwincodeOutbound);
+    }
+
     @Nullable
     public UUID getMemberTwincodeFactoryId() {
 
@@ -439,6 +457,41 @@ public class Group extends TwinmeRepositoryObject implements Originator {
         return mTwincodeOutbound != null && mGroupCreatedByTwincodeOutboundId != null && mGroupCreatedByTwincodeOutboundId.equals(mTwincodeOutbound.getId());
     }
 
+    /**
+     * Get the maximum number of members allowed in the group.  The value is managed by the server secure roster
+     * and saved locally in the Group object when we get the list of members.  For legacy groups, use the
+     * application default value.
+     * @return the maximum number of members allowed in the group.
+     */
+    public int getMaxMemberCount() {
+
+        return (int) getLong(MAX_GROUP_MEMBERS, BuildConfig.MAX_GROUP_MEMBERS);
+    }
+
+    /**
+     * Check if we must refresh the secure roster associated with the group by getting the list of members
+     * to the server.
+     * @return true if a refresh should be done.
+     */
+    public boolean needMemberRefresh() {
+        if (getSecureRosterId() == null) {
+            return false;
+        }
+
+        final long lastRefresh = getLong(REFRESH_TIME, 0);
+        final long now = System.currentTimeMillis();
+        return lastRefresh + REFRESH_DELAY < now;
+    }
+
+    /**
+     * Record the timestamp when we refreshed the secure roster.
+     * @param twinmeContext the twinme context.
+     */
+    public void markMemberRefreshed(@NonNull TwinmeContext twinmeContext) {
+        long now = System.currentTimeMillis();
+        putLong(REFRESH_TIME, now, twinmeContext);
+    }
+
     //
     // Override Object methods
     //
@@ -447,7 +500,7 @@ public class Group extends TwinmeRepositoryObject implements Originator {
     @NonNull
     public String toString() {
 
-        return "Group[" +
+        return "Group[" + mDatabaseId +
                 " id=" + mId +
                 " twincodeInbound=" + mTwincodeInbound +
                 (BuildConfig.ENABLE_DUMP ? " name=" + mName : "") +

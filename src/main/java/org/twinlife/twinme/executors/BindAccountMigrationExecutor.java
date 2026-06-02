@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2020-2025 twinlife SA.
+ *  Copyright (c) 2020-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -278,12 +278,12 @@ public class BindAccountMigrationExecutor extends AbstractConnectedTwinmeExecuto
             return;
         }
 
-        if (operationId == INVOKE_TWINCODE_OUTBOUND) {
+        // If the peer twincode or our twincode inbound are no longer valid, delete the account migration object and stop.
+        if (operationId == INVOKE_TWINCODE_OUTBOUND || operationId == UPDATE_TWINCODE_INBOUND) {
             if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) {
 
-                mState |= INVOKE_TWINCODE_OUTBOUND_DONE;
-
-                return;
+                mTwinmeContextImpl.deleteAccountMigration(mAccountMigration, (ErrorCode status, UUID accountMigrationId) -> {
+                });
             }
         }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2025 twinlife SA.
+ *  Copyright (c) 2025-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -16,7 +16,9 @@ import android.util.Log;
 import org.twinlife.twinlife.BaseService.ErrorCode;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.Consumer;
+import org.twinlife.twinlife.RosterId;
 import org.twinlife.twinme.TwinmeContextImpl;
+import org.twinlife.twinme.models.Group;
 import org.twinlife.twinme.models.GroupMember;
 import org.twinlife.twinme.models.Originator;
 
@@ -40,10 +42,12 @@ public class ListMembersExecutor extends AbstractTwinmeExecutor {
     private static final String LOG_TAG = "ListMembersExecutor";
     private static final boolean DEBUG = false;
 
-    private static final int LIST_MEMBERS = 1;
-    private static final int FETCH_MEMBERS = 1 << 1;
-    private static final int GET_GROUP_MEMBER = 1 << 2;
-    private static final int GET_GROUP_MEMBER_DONE = 1 << 3;
+    private static final int REFRESH_ROSTER = 1;
+    private static final int REFRESH_ROSTER_DONE = 1 << 1;
+    private static final int LIST_MEMBERS = 1 << 2;
+    private static final int FETCH_MEMBERS = 1 << 3;
+    private static final int GET_GROUP_MEMBER = 1 << 4;
+    private static final int GET_GROUP_MEMBER_DONE = 1 << 5;
 
     @NonNull
     private final Originator mSubject;
@@ -57,6 +61,8 @@ public class ListMembersExecutor extends AbstractTwinmeExecutor {
     private final List<UUID> mUnkownMembers;
     @NonNull
     private final List<UUID> mMemberTwincodes;
+    @Nullable
+    private final Group mGroup;
 
     public ListMembersExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, @NonNull Originator subject,
                                @Nullable ConversationService.MemberFilter filter,
@@ -75,6 +81,16 @@ public class ListMembersExecutor extends AbstractTwinmeExecutor {
         mMemberTwincodes = memberTwincodes == null ? new ArrayList<>() : memberTwincodes;
         mConsumer = consumer;
         mState = memberTwincodes == null ? 0 : LIST_MEMBERS;
+        if (mSubject instanceof Group && twinmeContextImpl.isConnected()) {
+            final Group group = (Group) mSubject;
+            if (group.needMemberRefresh()) {
+                mGroup = group;
+            } else {
+                mGroup = null;
+            }
+        } else {
+            mGroup = null;
+        }
     }
 
     //
@@ -89,6 +105,26 @@ public class ListMembersExecutor extends AbstractTwinmeExecutor {
         if (mStopped) {
 
             return;
+        }
+
+        //
+        // Optional step: if this is a group with a secure roster, trigger a refresh by asking the list of members to the
+        // server.  Such refresh is done only once every 24 hours, if the device is connected.
+        //
+        if (mGroup != null) {
+            if ((mState & REFRESH_ROSTER) == 0) {
+                mState |= REFRESH_ROSTER;
+
+                final RefreshRosterExecutor refreshRosterExecutor = new RefreshRosterExecutor(mTwinmeContextImpl, mGroup, (ErrorCode errorCode, Void unused) -> {
+                    mState |= REFRESH_ROSTER_DONE;
+                    onOperation();
+                });
+                mTwinmeContextImpl.execute(refreshRosterExecutor::start);
+                return;
+            }
+            if ((mState & REFRESH_ROSTER_DONE) == 0) {
+                return;
+            }
         }
 
         //

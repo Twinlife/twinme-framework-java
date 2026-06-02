@@ -18,6 +18,7 @@ import org.twinlife.twinlife.BaseService.AttributeNameStringValue;
 import org.twinlife.twinlife.BaseService.AttributeNameImageIdValue;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
 import org.twinlife.twinlife.ExportedImageId;
+import org.twinlife.twinlife.RosterId;
 import org.twinlife.twinlife.Twincode;
 import org.twinlife.twinlife.util.Utils;
 import org.twinlife.twinlife.util.Version;
@@ -56,6 +57,11 @@ public class TwinmeAttributes {
     public static void setTwincodeAttributeCreatedBy(@NonNull List<AttributeNameValue> attributes, @NonNull UUID twincodeId) {
 
         attributes.add(new AttributeNameStringValue(TWINCODE_ATTRIBUTE_CREATED_BY, twincodeId.toString()));
+    }
+
+    public static void setTwincodeAttributeRosterId(@NonNull List<AttributeNameValue> attributes, @NonNull RosterId rosterId) {
+
+        attributes.add(new AttributeNameStringValue(Twincode.ROSTER_ID, rosterId.id + ":" + rosterId.schemaId));
     }
 
     public static void setTwincodeAttributeInvitedBy(@NonNull List<AttributeNameValue> attributes, @NonNull UUID twincodeId) {

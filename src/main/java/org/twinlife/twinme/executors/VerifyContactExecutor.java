@@ -118,7 +118,7 @@ public class VerifyContactExecutor extends AbstractTimeoutTwinmeExecutor {
             };
             final RepositoryService.FindResult result;
             if (mTwincodeURI.kind == TwincodeURI.Kind.Authenticate && mTwincodeURI.pubKey != null) {
-                result = mTwinmeContextImpl.getRepositoryService().findWithSignature(mTwincodeURI.pubKey, factories);
+                result = mTwinmeContextImpl.getRepositoryService().findWithSignature(mTwincodeURI.pubKey.asString(), factories);
             } else {
                 result = RepositoryService.FindResult.error(ErrorCode.BAD_REQUEST);
             }

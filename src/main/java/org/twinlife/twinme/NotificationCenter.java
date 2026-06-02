@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016-2024 twinlife SA.
+ *  Copyright (c) 2016-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -33,6 +33,7 @@ import org.twinlife.twinme.models.AccountMigration;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public interface NotificationCenter {
@@ -58,8 +59,8 @@ public interface NotificationCenter {
 
     void onUpdateDescriptor(@NonNull Originator contact, @NonNull Conversation conversation, @NonNull Descriptor descriptor, UpdateType updateType);
 
-    void onUpdateAnnotation(@NonNull Originator contact, @NonNull Conversation conversation, @NonNull Descriptor descriptor,
-                            @NonNull TwincodeOutbound annotatingUser);
+    void onUpdateAnnotations(@NonNull Originator contact, @NonNull Conversation conversation, @NonNull Descriptor descriptor,
+                             @NonNull TwincodeOutbound annotatingUser, @NonNull Set<ConversationService.DescriptorAnnotation> updatedAnnotations);
 
     void onJoinGroup(@NonNull Originator group, @NonNull Conversation conversation);
 
