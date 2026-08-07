@@ -17,7 +17,7 @@ import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ConversationService.GroupMemberConversation;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;

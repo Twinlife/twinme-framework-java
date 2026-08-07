@@ -13,14 +13,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import android.util.Log;
 
-import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
 import org.twinlife.twinlife.RosterId;
 import org.twinlife.twinlife.TwincodeInbound;
 import org.twinlife.twinlife.TwincodeOutbound;
-import org.twinlife.twinlife.util.Utils;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.models.Group;
 
@@ -331,7 +329,7 @@ public class DeleteGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         }
 
         // Wait for reconnection
-        if (errorCode == BaseService.ErrorCode.TWINLIFE_OFFLINE || errorCode == ErrorCode.TIMEOUT_ERROR) {
+        if (errorCode == ErrorCode.TWINLIFE_OFFLINE || errorCode == ErrorCode.TIMEOUT_ERROR) {
             mRestarted = true;
             return;
         }

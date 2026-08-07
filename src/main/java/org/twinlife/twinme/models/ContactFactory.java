@@ -18,6 +18,7 @@ import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
 import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.DatabaseIdentifier;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.RepositoryImportService;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryObjectFactory;
@@ -138,33 +139,33 @@ public class ContactFactory extends TwinmeObjectFactory implements RepositoryObj
 
         if (!(contact instanceof Contact)) {
             Log.e(LOG_TAG, "object is not a contact: " + contact);
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, contact);
+            consumer.onGet(ErrorCode.BAD_REQUEST, contact);
             return;
         }
 
         if (contact.getTwincodeOutbound() == null) {
             Log.e(LOG_TAG, "Contact has no twincodeOutbound: " + contact);
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, contact);
+            consumer.onGet(ErrorCode.BAD_REQUEST, contact);
             return;
         }
 
         if (contact.getPeerTwincodeOutbound() == null) {
             Log.w(LOG_TAG, "Contact has no peer twincodeOutbound: " + contact + ", either creation phase 2 wasn't performed before backup or the relation was revoked by the peer");
             // Return SUCCESS as this is most likely a false positive.
-            consumer.onGet(BaseService.ErrorCode.SUCCESS, contact);
+            consumer.onGet(ErrorCode.SUCCESS, contact);
             return;
         }
 
         twinlifeContext.getTwincodeOutboundService().updateTwincode(contact.getTwincodeOutbound(), contact.getTwincodeOutbound().getAttributes(), null, (status, twincode) -> {
-            if (status == BaseService.ErrorCode.ITEM_NOT_FOUND || status == BaseService.ErrorCode.EXPIRED) {
+            if (status == ErrorCode.ITEM_NOT_FOUND || status == ErrorCode.EXPIRED) {
                 Log.e(LOG_TAG, "Contact's Twincode not found, deleting from local database : " + contact);
 
                 if (twinlifeContext instanceof TwinmeContext) {
                     ((TwinmeContext) twinlifeContext).deleteContact(1L, ((Contact) contact));
-                    consumer.onGet(BaseService.ErrorCode.ITEM_NOT_FOUND, contact);
+                    consumer.onGet(ErrorCode.ITEM_NOT_FOUND, contact);
                 }
                 return;
-            } else if (status != BaseService.ErrorCode.SUCCESS) {
+            } else if (status != ErrorCode.SUCCESS) {
                 Log.e(LOG_TAG, "Error updating twincode: " + status + " for contact " + contact);
                 consumer.onGet(status, contact);
                 return;
@@ -173,7 +174,7 @@ public class ContactFactory extends TwinmeObjectFactory implements RepositoryObj
             if (contact.getTwincodeOutbound().isEncrypted()) {
                 twinlifeContext.getTwincodeOutboundService().invokeTwincode(contact.getPeerTwincodeOutbound(), TwincodeOutboundService.INVOKE_WAKEUP,
                         ConversationProtocol.ACTION_CONVERSATION_NEED_SECRET, new ArrayList<>(), (errorCode, invocationId) -> {
-                            if (errorCode != BaseService.ErrorCode.SUCCESS) {
+                            if (errorCode != ErrorCode.SUCCESS) {
                                 Log.e(LOG_TAG, "Error invoking twincode: " + errorCode + " for contact " + contact);
                             } else if (DEBUG) {
                                 Log.d(LOG_TAG, "Successfully invoked twincode for contact " + contact);
@@ -183,7 +184,7 @@ public class ContactFactory extends TwinmeObjectFactory implements RepositoryObj
                 return;
             }
 
-            consumer.onGet(BaseService.ErrorCode.SUCCESS, contact);
+            consumer.onGet(ErrorCode.SUCCESS, contact);
         });
     }
 
@@ -195,7 +196,7 @@ public class ContactFactory extends TwinmeObjectFactory implements RepositoryObj
 
         if (!(contact instanceof Contact)) {
             Log.e(LOG_TAG, "object is not a contact: " + contact);
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, contact);
+            consumer.onGet(ErrorCode.BAD_REQUEST, contact);
             return;
         }
 
@@ -203,7 +204,7 @@ public class ContactFactory extends TwinmeObjectFactory implements RepositoryObj
             ((TwinmeContext) twinlifeContext).deleteContact(-1L, (Contact) contact);
         }
 
-        consumer.onGet(BaseService.ErrorCode.SUCCESS, contact);
+        consumer.onGet(ErrorCode.SUCCESS, contact);
     }
 
     private ContactFactory() {

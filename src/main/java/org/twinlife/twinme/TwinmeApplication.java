@@ -15,6 +15,7 @@ import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.ConnectionStatus;
 import org.twinlife.twinlife.JobService;
+import org.twinlife.twinlife.ShareInvitationMode;
 import org.twinlife.twinme.models.Profile;
 
 public interface TwinmeApplication {
@@ -73,4 +74,7 @@ public interface TwinmeApplication {
     boolean getDisplayNotificationSender();
 
     boolean screenLocked();
+
+    @NonNull
+    ShareInvitationMode getShareInvitationMode();
 }

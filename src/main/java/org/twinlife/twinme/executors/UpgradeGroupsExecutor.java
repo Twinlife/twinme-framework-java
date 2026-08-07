@@ -17,7 +17,7 @@ import android.util.Log;
 
 import org.twinlife.twinlife.AssertPoint;
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.ConversationService.GroupConversation;
 import org.twinlife.twinlife.Filter;
@@ -286,7 +286,7 @@ public class UpgradeGroupsExecutor extends AbstractConnectedTwinmeExecutor {
             return;
         }
 
-        mState |= CREATE_PRIVATE_KEY_DONE;;
+        mState |= CREATE_PRIVATE_KEY_DONE;
         onOperation();
     }
 
@@ -379,7 +379,7 @@ public class UpgradeGroupsExecutor extends AbstractConnectedTwinmeExecutor {
         mGroupConversation = null;
     }
 
-    protected void onOperationError(int operationId, BaseService.ErrorCode errorCode, @Nullable String errorParameter) {
+    protected void onOperationError(int operationId, ErrorCode errorCode, @Nullable String errorParameter) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onError: operationId=" + operationId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
         }

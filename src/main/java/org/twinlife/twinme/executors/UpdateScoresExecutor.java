@@ -12,7 +12,7 @@ package org.twinlife.twinme.executors;
 import androidx.annotation.NonNull;
 import android.util.Log;
 
-import org.twinlife.twinlife.BaseService;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.models.ContactFactory;
@@ -79,7 +79,7 @@ public  class UpdateScoresExecutor extends AbstractTwinmeExecutor {
         if ((mState & UPDATE_CONTACT_SCORES) == 0) {
             mState |= UPDATE_CONTACT_SCORES;
 
-            mTwinmeContextImpl.getRepositoryService().updateStats(ContactFactory.INSTANCE, mUpdateScore, (BaseService.ErrorCode status, List<RepositoryObject> list) -> {
+            mTwinmeContextImpl.getRepositoryService().updateStats(ContactFactory.INSTANCE, mUpdateScore, (ErrorCode status, List<RepositoryObject> list) -> {
                 mContacts = list;
                 mState |= UPDATE_CONTACT_SCORES_DONE;
             });
@@ -95,7 +95,7 @@ public  class UpdateScoresExecutor extends AbstractTwinmeExecutor {
         if ((mState & UPDATE_GROUP_SCORES) == 0) {
             mState |= UPDATE_GROUP_SCORES;
 
-            mTwinmeContextImpl.getRepositoryService().updateStats(GroupFactory.INSTANCE, mUpdateScore, (BaseService.ErrorCode status, List<RepositoryObject> list) -> {
+            mTwinmeContextImpl.getRepositoryService().updateStats(GroupFactory.INSTANCE, mUpdateScore, (ErrorCode status, List<RepositoryObject> list) -> {
                 mGroups = list;
                 mState |= UPDATE_GROUP_SCORES_DONE;
             });

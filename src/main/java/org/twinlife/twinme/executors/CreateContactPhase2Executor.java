@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2014-2025 twinlife SA.
+ *  Copyright (c) 2014-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -16,9 +16,12 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ConversationService;
+import org.twinlife.twinlife.ConversationService.Descriptor;
+import org.twinlife.twinlife.ConversationService.DescriptorId;
+import org.twinlife.twinlife.ConversationService.ContactShareDescriptor;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.AssertPoint;
 import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.Filter;
@@ -61,10 +64,11 @@ public class CreateContactPhase2Executor extends AbstractConnectedTwinmeExecutor
     private static final int COPY_IMAGE_DONE = 1 << 5;
     private static final int CREATE_TWINCODE = 1 << 6;
     private static final int CREATE_TWINCODE_DONE = 1 << 7;
-    private static final int CREATE_CONTACT_OBJECT = 1 << 10;
-    private static final int CREATE_CONTACT_OBJECT_DONE = 1 << 11;
-    private static final int INVOKE_TWINCODE_OUTBOUND = 1 << 12;
-    private static final int INVOKE_TWINCODE_OUTBOUND_DONE = 1 << 13;
+    private static final int CREATE_CONTACT_OBJECT = 1 << 8;
+    private static final int CREATE_CONTACT_OBJECT_DONE = 1 << 9;
+    private static final int INVOKE_TWINCODE_OUTBOUND = 1 << 10;
+    private static final int INVOKE_TWINCODE_OUTBOUND_DONE = 1 << 11;
+    private static final int UPDATE_INVITATION = 1 << 12;
     private static final int DELETE_INVITATION = 1 << 14;
     private static final int DELETE_INVITATION_DONE = 1 << 15;
     private static final int GET_PEER_IMAGE = 1 << 16;
@@ -91,6 +95,7 @@ public class CreateContactPhase2Executor extends AbstractConnectedTwinmeExecutor
     private Invitation mInvitation;
     private boolean mUnbindContact = false;
     private boolean mCreationError = false;
+    private boolean mKeepDescriptor = false;
 
     public CreateContactPhase2Executor(@NonNull TwinmeContextImpl twinmeContextImpl,
                                        @NonNull PairInviteInvocation invocation,
@@ -388,17 +393,34 @@ public class CreateContactPhase2Executor extends AbstractConnectedTwinmeExecutor
             }
         }
 
-        //
-        // Step 8: delete the invitation object because we don't need it anymore.
-        //
-
         if (mInvitation != null) {
+            //
+            // Step 8a: if the invitation is associated with a ContactShareDescriptor,
+            // update the status to indicate that the contact has accepted the relation.
+            //
+            if ((mState & UPDATE_INVITATION) == 0) {
+                mState |= UPDATE_INVITATION;
+                DescriptorId descriptorId = mInvitation.getDescriptorId();
+                if (descriptorId != null) {
+                    Descriptor descriptor = mTwinmeContextImpl.getConversationService().getDescriptor(descriptorId);
+                    if (descriptor instanceof ContactShareDescriptor) {
+                        ContactShareDescriptor contactShareDescriptor = (ContactShareDescriptor) descriptor;
+
+                        mTwinmeContextImpl.getConversationService().updateContactShareDescriptor(contactShareDescriptor, ConversationService.InvitationDescriptor.Status.JOINED);
+                        mKeepDescriptor = true;
+                    }
+                }
+            }
+
+            //
+            // Step 8b: delete the invitation object because we don't need it anymore.
+            //
             if ((mState & DELETE_INVITATION) == 0) {
                 mState |= DELETE_INVITATION;
 
                 long requestId = newOperation(DELETE_INVITATION);
 
-                mTwinmeContextImpl.deleteInvitation(requestId, mInvitation);
+                new DeleteInvitationExecutor(mTwinmeContextImpl, requestId, mInvitation, 0, mKeepDescriptor).start();
                 return;
             }
             if ((mState & DELETE_INVITATION_DONE) == 0) {
@@ -407,7 +429,7 @@ public class CreateContactPhase2Executor extends AbstractConnectedTwinmeExecutor
         }
 
         //
-        // Step 8: get the peer thumbnail image so that we have it in our local cache before displaying the notification.
+        // Step 9: get the peer thumbnail image so that we have it in our local cache before displaying the notification.
         //
 
         if (mContact != null && mContact.getAvatarId() != null && !mUnbindContact) {
@@ -481,7 +503,7 @@ public class CreateContactPhase2Executor extends AbstractConnectedTwinmeExecutor
         onOperation();
     }
 
-    private void onCreateObject(BaseService.ErrorCode errorCode, @Nullable RepositoryObject object) {
+    private void onCreateObject(ErrorCode errorCode, @Nullable RepositoryObject object) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onCreateObject: object=" + object);
         }

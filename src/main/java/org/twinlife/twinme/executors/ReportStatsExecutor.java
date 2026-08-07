@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2018-2025 twinlife SA.
+ *  Copyright (c) 2018-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -55,7 +55,7 @@ public class ReportStatsExecutor extends AbstractConnectedTwinmeExecutor {
     private static final String DEVICE_REPORT = "androidDeviceReport";
     private static final String SERVICE_REPORT = "serviceReport";
     private static final String LOCATION_REPORT = "locationReport";
-    private static final String REPOSITORY_REPORT_VERSION = "4:";
+    private static final String REPOSITORY_REPORT_VERSION = "5:";
     private static final String DEVICE_REPORT_VERSION = "1:";
     private static final String SERVICE_REPORT_VERSION = "2:";
     private static final String LOCATION_REPORT_VERSION = "1:";
@@ -243,7 +243,9 @@ public class ReportStatsExecutor extends AbstractConnectedTwinmeExecutor {
             StatType.NB_FILE_SENT,
             StatType.NB_AUDIO_SENT,
             StatType.NB_GEOLOCATION_SENT,
-            StatType.NB_TWINCODE_SENT
+            StatType.NB_TWINCODE_SENT,
+            StatType.NB_POLL_SENT,
+            StatType.NB_CONTACT_SHARE_SENT
     };
     private static final StatType[] contactReceiveReport = {
             StatType.NB_MESSAGE_RECEIVED,
@@ -252,7 +254,9 @@ public class ReportStatsExecutor extends AbstractConnectedTwinmeExecutor {
             StatType.NB_FILE_RECEIVED,
             StatType.NB_AUDIO_RECEIVED,
             StatType.NB_GEOLOCATION_RECEIVED,
-            StatType.NB_TWINCODE_RECEIVED
+            StatType.NB_TWINCODE_RECEIVED,
+            StatType.NB_POLL_RECEIVED,
+            StatType.NB_CONTACT_SHARE_RECEIVED
     };
     private static final StatType[] contactSendAudioReport = {
             StatType.NB_AUDIO_CALL_SENT
@@ -275,7 +279,9 @@ public class ReportStatsExecutor extends AbstractConnectedTwinmeExecutor {
             StatType.NB_FILE_SENT,
             StatType.NB_AUDIO_SENT,
             StatType.NB_GEOLOCATION_SENT,
-            StatType.NB_TWINCODE_SENT
+            StatType.NB_TWINCODE_SENT,
+            StatType.NB_POLL_SENT,
+            StatType.NB_CONTACT_SHARE_SENT
     };
     private static final StatType[] groupReceiveReport = {
             StatType.NB_MESSAGE_RECEIVED,
@@ -284,7 +290,9 @@ public class ReportStatsExecutor extends AbstractConnectedTwinmeExecutor {
             StatType.NB_FILE_RECEIVED,
             StatType.NB_AUDIO_RECEIVED,
             StatType.NB_GEOLOCATION_RECEIVED,
-            StatType.NB_TWINCODE_RECEIVED
+            StatType.NB_TWINCODE_RECEIVED,
+            StatType.NB_POLL_RECEIVED,
+            StatType.NB_CONTACT_SHARE_RECEIVED
     };
 
     private void reportStats(@NonNull String name, @NonNull RepositoryService.ObjectStatReport stat, StatType[] report) {

@@ -15,7 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.ImageId;
@@ -319,7 +319,7 @@ public class ChangeProfileTwincodeExecutor extends AbstractTimeoutTwinmeExecutor
         }
 
         // Wait for reconnection
-        if (errorCode == BaseService.ErrorCode.TWINLIFE_OFFLINE) {
+        if (errorCode == ErrorCode.TWINLIFE_OFFLINE) {
             mRestarted = true;
 
             return;
@@ -329,7 +329,7 @@ public class ChangeProfileTwincodeExecutor extends AbstractTimeoutTwinmeExecutor
         stop();
     }
 
-    protected void fireError(@NonNull BaseService.ErrorCode errorCode) {
+    protected void fireError(@NonNull ErrorCode errorCode) {
         if (DEBUG) {
             Log.d(LOG_TAG, "fireError: errorCode=" + errorCode);
         }

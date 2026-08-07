@@ -18,6 +18,7 @@ import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.AssertPoint;
 import org.twinlife.twinlife.BaseService;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.Filter;
 import org.twinlife.twinlife.ImageId;
@@ -122,24 +123,24 @@ final class RelationOrchestrator implements TwincodeInboundService.InvocationLis
         } else if (object instanceof Profile) {
             mTwinmeContext.deleteProfile(BaseService.DEFAULT_REQUEST_ID, (Profile) object);
         } else if (object instanceof AccountMigration) {
-            mTwinmeContext.deleteAccountMigration((AccountMigration) object, (BaseService.ErrorCode errorCode, UUID id) -> {});
+            mTwinmeContext.deleteAccountMigration((AccountMigration) object, (ErrorCode errorCode, UUID id) -> {});
         } else {
             RepositoryService repositoryService = mTwinmeContext.getRepositoryService();
-            repositoryService.deleteObject(object, (BaseService.ErrorCode status, UUID objectId) -> {
+            repositoryService.deleteObject(object, (ErrorCode status, UUID objectId) -> {
             });
         }
     }
 
     @Override
     @Nullable
-    public BaseService.ErrorCode onInvokeTwincode(@NonNull TwincodeInvocation invocation) {
+    public ErrorCode onInvokeTwincode(@NonNull TwincodeInvocation invocation) {
         if (DEBUG) {
             Log.d(LOG_TAG, "ConversationSynchronizeInvocation.onInvokeTwincode: invocation=" + invocation);
         }
 
         final ProcessInvocationExecutor processInvocationExecutor = new ProcessInvocationExecutor(mTwinmeContext, invocation,
-                (BaseService.ErrorCode errorCode, Invocation newInvocation) -> {
-                    if (errorCode != BaseService.ErrorCode.SUCCESS || newInvocation == null) {
+                (ErrorCode errorCode, Invocation newInvocation) -> {
+                    if (errorCode != ErrorCode.SUCCESS || newInvocation == null) {
                         mTwinmeContext.acknowledgeInvocation(invocation.invocationId, errorCode);
                         return;
                     }
@@ -173,7 +174,7 @@ final class RelationOrchestrator implements TwincodeInboundService.InvocationLis
                 } else {
                     mTwinmeContext.assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
 
-                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), BaseService.ErrorCode.BAD_REQUEST);
+                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
                 }
             } else if (receiver instanceof Invitation) {
                 if (invocation instanceof PairInviteInvocation) {
@@ -189,7 +190,7 @@ final class RelationOrchestrator implements TwincodeInboundService.InvocationLis
                 } else {
                     mTwinmeContext.assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
 
-                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), BaseService.ErrorCode.BAD_REQUEST);
+                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
                 }
             } else if (receiver instanceof Contact) {
                 Contact contact = (Contact) receiver;
@@ -213,7 +214,7 @@ final class RelationOrchestrator implements TwincodeInboundService.InvocationLis
                 } else {
                     mTwinmeContext.assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
 
-                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), BaseService.ErrorCode.BAD_REQUEST);
+                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
                 }
             } else if (receiver instanceof Group) {
                 final Group group = (Group) receiver;
@@ -230,7 +231,7 @@ final class RelationOrchestrator implements TwincodeInboundService.InvocationLis
                 } else {
                     mTwinmeContext.assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
 
-                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), BaseService.ErrorCode.BAD_REQUEST);
+                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
                 }
 
             } else if (receiver instanceof AccountMigration) {
@@ -241,17 +242,17 @@ final class RelationOrchestrator implements TwincodeInboundService.InvocationLis
                     bindAccountMigration(pairBindInvocation, accountMigration);
 
                 } else if (invocation instanceof PairUnbindInvocation) {
-                    mTwinmeContext.deleteAccountMigration(accountMigration, (BaseService.ErrorCode status, UUID deviceMigrationId) -> mTwinmeContext.acknowledgeInvocation(invocation.getId(), BaseService.ErrorCode.SUCCESS));
+                    mTwinmeContext.deleteAccountMigration(accountMigration, (ErrorCode status, UUID deviceMigrationId) -> mTwinmeContext.acknowledgeInvocation(invocation.getId(), ErrorCode.SUCCESS));
 
                 } else {
                     mTwinmeContext.assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
 
-                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), BaseService.ErrorCode.BAD_REQUEST);
+                    mTwinmeContext.acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
                 }
             } else {
                 mTwinmeContext.assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
 
-                mTwinmeContext.acknowledgeInvocation(invocation.getId(), BaseService.ErrorCode.BAD_REQUEST);
+                mTwinmeContext.acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
             }
         } else {
             if (receiver instanceof Profile) {
@@ -261,7 +262,7 @@ final class RelationOrchestrator implements TwincodeInboundService.InvocationLis
             } else {
                 mTwinmeContext.assertion(TwinmeAssertPoint.PROCESS_INVOCATION, AssertPoint.create(receiver).putInvocationId(invocation.getId()));
 
-                mTwinmeContext.acknowledgeInvocation(invocation.getId(), BaseService.ErrorCode.BAD_REQUEST);
+                mTwinmeContext.acknowledgeInvocation(invocation.getId(), ErrorCode.BAD_REQUEST);
             }
         }
     }

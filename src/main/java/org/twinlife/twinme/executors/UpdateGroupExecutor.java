@@ -16,7 +16,7 @@ import android.graphics.Bitmap;
 import android.util.Log;
 
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.BaseService.AttributeNameStringValue;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.ConversationService.GroupConversation;
@@ -687,7 +687,7 @@ public class UpdateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
     }
 
     @Override
-    protected void onOperationError(int operationId, BaseService.ErrorCode errorCode, @Nullable String errorParameter) {
+    protected void onOperationError(int operationId, ErrorCode errorCode, @Nullable String errorParameter) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onError: operationId=" + operationId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
         }

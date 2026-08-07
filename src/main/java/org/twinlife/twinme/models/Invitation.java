@@ -53,6 +53,7 @@ import java.util.UUID;
 public class Invitation extends TwinmeRepositoryObject {
 
     public static final UUID SCHEMA_ID = UUID.fromString("1d1545d4-1912-492a-87db-60ffd68461ff");
+    public static final UUID CONTACT_SHARE_SCHEMA_ID = UUID.fromString("95EAAFDA-9660-4D77-88F5-413510451C21");
     public static final int SCHEMA_VERSION = 1;
 
     @Nullable

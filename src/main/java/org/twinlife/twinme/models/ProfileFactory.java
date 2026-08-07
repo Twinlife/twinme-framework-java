@@ -17,6 +17,7 @@ import androidx.annotation.Nullable;
 import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.DatabaseIdentifier;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.RepositoryImportService;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryObjectFactory;
@@ -117,7 +118,7 @@ public class ProfileFactory extends TwinmeObjectFactory implements RepositoryObj
 
         if (!(profile instanceof Profile)) {
             Log.e(LOG_TAG, "object is not a profile: " + profile);
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, profile);
+            consumer.onGet(ErrorCode.BAD_REQUEST, profile);
             return;
         }
 
@@ -125,7 +126,7 @@ public class ProfileFactory extends TwinmeObjectFactory implements RepositoryObj
             Log.e(LOG_TAG, "Profile has no twincodeOutbound: " + profile);
             if (twinlifeContext instanceof TwinmeContext) {
                 ((TwinmeContext) twinlifeContext).changeProfileTwincode((Profile) profile, (status, updatedProfile) -> {
-                    if (status != BaseService.ErrorCode.SUCCESS) {
+                    if (status != ErrorCode.SUCCESS) {
                         Log.e(LOG_TAG, "Error changing profile twincode: " + status);
                     } else if (DEBUG) {
                         Log.d(LOG_TAG, "Successfully changed twincode for profile " + profile);
@@ -137,10 +138,10 @@ public class ProfileFactory extends TwinmeObjectFactory implements RepositoryObj
         }
 
         twinlifeContext.getTwincodeOutboundService().updateTwincode(profile.getTwincodeOutbound(), profile.getTwincodeOutbound().getAttributes(), null, (errorCode, twincode) -> {
-            if (errorCode == BaseService.ErrorCode.ITEM_NOT_FOUND || errorCode == BaseService.ErrorCode.EXPIRED) {
+            if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) {
                 if (twinlifeContext instanceof TwinmeContext) {
                     ((TwinmeContext) twinlifeContext).changeProfileTwincode((Profile) profile, (status, updatedProfile) -> {
-                        if (status != BaseService.ErrorCode.SUCCESS) {
+                        if (status != ErrorCode.SUCCESS) {
                             Log.e(LOG_TAG, "Error changing profile twincode: " + status);
                         } else if (DEBUG) {
                             Log.d(LOG_TAG, "Successfully changed twincode for profile " + profile);
@@ -149,7 +150,7 @@ public class ProfileFactory extends TwinmeObjectFactory implements RepositoryObj
                     });
                 }
                 return;
-            } else if (errorCode != BaseService.ErrorCode.SUCCESS) {
+            } else if (errorCode != ErrorCode.SUCCESS) {
                 Log.e(LOG_TAG, "Error updating twincode: " + errorCode + " for profile: " + profile);
             } else if (DEBUG) {
                 Log.d(LOG_TAG, "Successfully updated twincode for profile " + profile);
@@ -166,7 +167,7 @@ public class ProfileFactory extends TwinmeObjectFactory implements RepositoryObj
 
         if (!(profile instanceof Profile)) {
             Log.e(LOG_TAG, "object is not a profile: " + profile);
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, profile);
+            consumer.onGet(ErrorCode.BAD_REQUEST, profile);
             return;
         }
 
@@ -174,7 +175,7 @@ public class ProfileFactory extends TwinmeObjectFactory implements RepositoryObj
             ((TwinmeContext) twinlifeContext).deleteProfile(-1L, (Profile) profile);
         }
 
-        consumer.onGet(BaseService.ErrorCode.SUCCESS, profile);
+        consumer.onGet(ErrorCode.SUCCESS, profile);
     }
 
     private ProfileFactory() {

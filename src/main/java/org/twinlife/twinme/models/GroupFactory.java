@@ -19,6 +19,7 @@ import org.twinlife.twinlife.BaseService.AttributeNameValue;
 import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.DatabaseIdentifier;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.RepositoryImportService;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryObjectFactory;
@@ -128,13 +129,13 @@ public class GroupFactory extends TwinmeObjectFactory implements RepositoryObjec
 
         if (!(object instanceof Group)) {
             Log.e(LOG_TAG, "object: " + object + " is not a Group, this should not happen");
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, object);
+            consumer.onGet(ErrorCode.BAD_REQUEST, object);
             return;
         }
 
         if (!(twinlifeContext instanceof TwinmeContextImpl)) {
             Log.e(LOG_TAG, "twinlifeContext: " + twinlifeContext + " is not a TwinmeContextImpl, this should not happen");
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, object);
+            consumer.onGet(ErrorCode.BAD_REQUEST, object);
             return;
         }
 
@@ -145,7 +146,7 @@ public class GroupFactory extends TwinmeObjectFactory implements RepositoryObjec
 
         if (groupTwincode == null) {
             Log.e(LOG_TAG, "Group has no twincodeOutbound: " + group);
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, group);
+            consumer.onGet(ErrorCode.BAD_REQUEST, group);
             return;
         }
 
@@ -154,18 +155,18 @@ public class GroupFactory extends TwinmeObjectFactory implements RepositoryObjec
 
         if (groupConversation == null) {
             Log.e(LOG_TAG, "Conversation could not be created for group: " + group);
-            consumer.onGet(BaseService.ErrorCode.LIBRARY_ERROR, group);
+            consumer.onGet(ErrorCode.LIBRARY_ERROR, group);
             return;
         }
 
         Consumer<TwincodeOutbound> refreshGroupAfterTwincodeUpdate = (status, updatedTwincode) -> {
-            if (status == BaseService.ErrorCode.ITEM_NOT_FOUND || status == BaseService.ErrorCode.EXPIRED) {
+            if (status == ErrorCode.ITEM_NOT_FOUND || status == ErrorCode.EXPIRED) {
                 Log.e(LOG_TAG, "Group's Twincode not found, deleting from local database : " + group);
 
                 twinmeContext.deleteGroup(-1L, group);
-                consumer.onGet(BaseService.ErrorCode.ITEM_NOT_FOUND, group);
+                consumer.onGet(ErrorCode.ITEM_NOT_FOUND, group);
                 return;
-            } else if (status != BaseService.ErrorCode.SUCCESS) {
+            } else if (status != ErrorCode.SUCCESS) {
                 Log.e(LOG_TAG, "Error updating twincode: " + status + " for group " + group);
                 consumer.onGet(status, group);
                 return;

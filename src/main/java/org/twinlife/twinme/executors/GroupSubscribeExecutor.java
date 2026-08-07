@@ -15,7 +15,7 @@ import androidx.annotation.Nullable;
 import android.util.Log;
 
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.ConversationService.Conversation;
 import org.twinlife.twinlife.TwincodeOutbound;

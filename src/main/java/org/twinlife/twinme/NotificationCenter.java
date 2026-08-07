@@ -55,7 +55,7 @@ public interface NotificationCenter {
 
     void onIncomingAccountMigration(@NonNull AccountMigration accountMigration, @NonNull UUID peerConnectionId);
 
-    void onPopDescriptor(@NonNull Originator contact, @NonNull Conversation conversation, @NonNull UUID sessionId, @NonNull Descriptor descriptor);
+    void onPopDescriptor(@NonNull Originator contact, @NonNull Conversation conversation, @NonNull Descriptor descriptor);
 
     void onUpdateDescriptor(@NonNull Originator contact, @NonNull Conversation conversation, @NonNull Descriptor descriptor, UpdateType updateType);
 
@@ -84,7 +84,7 @@ public interface NotificationCenter {
 
     void cancelAll();
 
-    void startForegroundService(Service service, boolean transferring);
+    android.app.Notification createPeerServiceNotification(boolean transferring);
 
     android.app.Notification createCallNotification(@NonNull CallStatus mode, @NonNull Originator originator, @Nullable UUID callId, boolean mute);
 

@@ -16,7 +16,7 @@ import androidx.annotation.Nullable;
 import android.util.Log;
 
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.RepositoryObjectFactory;
 import org.twinlife.twinlife.RepositoryService;
 import org.twinlife.twinlife.TrustMethod;
@@ -256,13 +256,13 @@ public class VerifyContactExecutor extends AbstractTimeoutTwinmeExecutor {
         onOperation();
     }
 
-    protected void onOperationError(int operationId, BaseService.ErrorCode errorCode, @Nullable String errorParameter) {
+    protected void onOperationError(int operationId, ErrorCode errorCode, @Nullable String errorParameter) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onError: operationId=" + operationId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
         }
 
         // Wait for reconnection
-        if (errorCode == BaseService.ErrorCode.TWINLIFE_OFFLINE) {
+        if (errorCode == ErrorCode.TWINLIFE_OFFLINE) {
             mRestarted = true;
 
             return;

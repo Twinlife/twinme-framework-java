@@ -19,7 +19,7 @@ import android.util.Log;
 import org.twinlife.twinlife.AssertPoint;
 import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
 import org.twinlife.twinlife.RepositoryObject;
@@ -345,13 +345,13 @@ public class BindContactExecutor extends AbstractConnectedTwinmeExecutor {
         onOperation();
     }
 
-    protected void onOperationError(int operationId, BaseService.ErrorCode errorCode, @Nullable String errorParameter) {
+    protected void onOperationError(int operationId, ErrorCode errorCode, @Nullable String errorParameter) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onError: operationId=" + operationId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
         }
 
         // Wait for reconnection
-        if (errorCode == BaseService.ErrorCode.TWINLIFE_OFFLINE) {
+        if (errorCode == ErrorCode.TWINLIFE_OFFLINE) {
             mRestarted = true;
 
             return;

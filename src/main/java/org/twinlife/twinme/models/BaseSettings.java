@@ -174,7 +174,7 @@ public class BaseSettings {
     }
 
     protected void updateProperties(@NonNull BaseService.AttributeNameListValue list) {
-        //noinspection unchecked
+        @SuppressWarnings("unchecked")
         final List<BaseService.AttributeNameValue> values = (List<BaseService.AttributeNameValue>)list.value;
         final Map<String, String> properties = new HashMap<>();
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019-2024 twinlife SA.
+ *  Copyright (c) 2019-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -13,8 +13,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import android.util.Log;
 
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
+import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.Filter;
+import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.util.Utils;
 import org.twinlife.twinme.TwinmeContextImpl;
@@ -67,6 +69,10 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
     private static final int DELETE_PROFILE_DONE = 1 << 20;
     private static final int DELETE_SPACE = 1 << 21;
     private static final int DELETE_SPACE_DONE = 1 << 22;
+    private static final int DELETE_SPACE_IMAGE = 1 << 23;
+    private static final int DELETE_SPACE_IMAGE_DONE = 1 << 24;
+    private static final int DELETE_SPACE_SETTINGS = 1 << 25;
+    private static final int DELETE_SPACE_SETTINGS_DONE = 1 << 26;
 
     private final List<Contact> mContacts = new ArrayList<>();
     private final List<Group> mGroups = new ArrayList<>();
@@ -78,14 +84,17 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
     private final Set<UUID> mToDeleteCallReceivers = new HashSet<>();
     private final Space mSpace;
     private final Filter<RepositoryObject> mFilter;
+    @Nullable
+    private final UUID mSpaceAvatarId;
 
-    public DeleteSpaceExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, Space space) {
+    public DeleteSpaceExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull Space space) {
         super(twinmeContextImpl, requestId, LOG_TAG, DEFAULT_TIMEOUT);
         if (DEBUG) {
             Log.d(LOG_TAG, "DeleteAccountExecutor: twinmeContextImpl=" + twinmeContextImpl + " requestId=" + requestId);
         }
 
         mSpace = space;
+        mSpaceAvatarId = space.getSpaceAvatarId();
         mFilter = new Filter<>(mSpace);
     }
 
@@ -281,7 +290,7 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
         // Step 7: get and delete every group.
         //
 
-        // The mState is not used but instead we accumulate in mInvitations a list of groups we want to be deleted.
+        // The mState is not used but instead we accumulate in mInvitations a list of invitations we want to be deleted.
         while (!mInvitations.isEmpty()) {
 
             // Pick the last invitation id.
@@ -292,7 +301,7 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
             }
 
             mToDeleteInvitations.add(invitation.getId());
-            new DeleteInvitationExecutor(mTwinmeContextImpl, requestId, invitation, 0).start();
+            new DeleteInvitationExecutor(mTwinmeContextImpl, requestId, invitation, 0, false).start();
         }
 
         //
@@ -302,7 +311,7 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
         // The mState is not used but instead we accumulate in mCallReceivers a list of call receivers we want to be deleted.
         while (!mCallReceivers.isEmpty()) {
 
-            // Pick the last group id.
+            // Pick the last call receiver id.
             CallReceiver callReceiver = mCallReceivers.remove(mCallReceivers.size() - 1);
             long requestId = newOperation(DELETE_CALL_RECEIVER);
             if (DEBUG) {
@@ -365,6 +374,40 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
             return;
         }
         if ((mState & DELETE_SPACE_DONE) == 0) {
+            return;
+        }
+
+        //
+        // Step 12: delete the space image.
+        //
+        if ((mState & DELETE_SPACE_IMAGE) == 0) {
+            mState |= DELETE_SPACE_IMAGE;
+            if (mSpaceAvatarId != null) {
+                ExportedImageId imageId = mTwinmeContextImpl.getImageService().getImageId(mSpaceAvatarId);
+                if (imageId != null) {
+                    mTwinmeContextImpl.getImageService().deleteImage(imageId, this::onDeleteSpaceImage);
+                    return;
+                }
+            }
+            mState |= DELETE_SPACE_IMAGE_DONE;
+        }
+        if ((mState & DELETE_SPACE_IMAGE_DONE) == 0) {
+            return;
+        }
+
+        //
+        // Step 13: delete the space settings object.
+        //
+        if ((mState & DELETE_SPACE_SETTINGS) == 0) {
+            mState |= DELETE_SPACE_SETTINGS;
+            RepositoryObject spaceSettings = mSpace.getOwner();
+            if (spaceSettings != null) {
+                mTwinmeContextImpl.getRepositoryService().deleteObject(spaceSettings, this::onDeleteSpaceSettingObject);
+                return;
+            }
+            mState |= DELETE_SPACE_SETTINGS_DONE;
+        }
+        if ((mState & DELETE_SPACE_SETTINGS_DONE) == 0) {
             return;
         }
 
@@ -461,9 +504,9 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
 
         // Keep and delete only the invitations of the space to delete.
         for (RepositoryObject object : objects) {
-            Group c = (Group) object;
-            if (mSpace.isOwner(c)) {
-                mGroups.add(c);
+            Invitation c = (Invitation) object;
+            if (c.isSpace(mSpace)) {
+                mInvitations.add(c);
             }
         }
         onOperation();
@@ -536,6 +579,24 @@ public class DeleteSpaceExecutor extends AbstractTimeoutTwinmeExecutor {
         mTwinmeContextImpl.assertEqual(ExecutorAssertPoint.INVALID_SUBJECT, objectId, mSpace.getId());
 
         mState |= DELETE_SPACE_DONE;
+        onOperation();
+    }
+
+    private void onDeleteSpaceImage(@NonNull ErrorCode errorCode, @Nullable ImageId imageId) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onDeleteSpaceImage: imageId=" + imageId);
+        }
+
+        mState |= DELETE_SPACE_IMAGE_DONE;
+        onOperation();
+    }
+
+    private void onDeleteSpaceSettingObject(@NonNull ErrorCode errorCode, @Nullable UUID objectId) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "onDeleteSpaceSettingObject: objectId=" + objectId);
+        }
+
+        mState |= DELETE_SPACE_SETTINGS_DONE;
         onOperation();
     }
 

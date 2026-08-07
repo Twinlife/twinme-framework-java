@@ -13,8 +13,8 @@ import androidx.annotation.Nullable;
 
 import android.util.Log;
 
-import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.ConversationService;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinme.TwinmeContext;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.actions.TwinmeAction;
@@ -47,7 +47,7 @@ public abstract class AbstractTimeoutTwinmeExecutor extends TwinmeAction {
     protected class ConversationServiceObserver extends ConversationService.DefaultServiceObserver {
 
         @Override
-        public void onError(long requestId, BaseService.ErrorCode errorCode, @Nullable String errorParameter) {
+        public void onError(long requestId, ErrorCode errorCode, @Nullable String errorParameter) {
             if (DEBUG) {
                 Log.d(LOG_TAG, "ConversationServiceObserver.onError: requestId=" + requestId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
             }
@@ -123,7 +123,7 @@ public abstract class AbstractTimeoutTwinmeExecutor extends TwinmeAction {
     }
 
     @Override
-    public void onError(long requestId, BaseService.ErrorCode errorCode, @Nullable String errorParameter) {
+    public void onError(long requestId, ErrorCode errorCode, @Nullable String errorParameter) {
         if (DEBUG) {
             Log.d(LOG_TAG, "TwinmeContextObserver.onError: requestId=" + requestId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
         }
@@ -145,7 +145,7 @@ public abstract class AbstractTimeoutTwinmeExecutor extends TwinmeAction {
         // for reconnection until everything completes.  We can report the timeout only
         // when we never reached connection.
         if (!mConnected) {
-            fireError(BaseService.ErrorCode.TIMEOUT_ERROR);
+            fireError(ErrorCode.TIMEOUT_ERROR);
         }
     }
 
@@ -153,7 +153,7 @@ public abstract class AbstractTimeoutTwinmeExecutor extends TwinmeAction {
     // Protected methods
     //
 
-    protected void fireError(@NonNull BaseService.ErrorCode errorCode) {
+    protected void fireError(@NonNull ErrorCode errorCode) {
         if (DEBUG) {
             Log.d(LOG_TAG, "fireError: errorCode=" + errorCode);
         }
@@ -194,13 +194,13 @@ public abstract class AbstractTimeoutTwinmeExecutor extends TwinmeAction {
         return 0;
     }
 
-    protected void onOperationError(int operationId, BaseService.ErrorCode errorCode, @Nullable String errorParameter) {
+    protected void onOperationError(int operationId, ErrorCode errorCode, @Nullable String errorParameter) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onError: operationId=" + operationId + " errorCode=" + errorCode + " errorParameter=" + errorParameter);
         }
 
         // Wait for reconnection
-        if (errorCode == BaseService.ErrorCode.TWINLIFE_OFFLINE) {
+        if (errorCode == ErrorCode.TWINLIFE_OFFLINE) {
             mRestarted = true;
 
             return;

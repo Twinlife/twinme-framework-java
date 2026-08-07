@@ -16,7 +16,7 @@ import android.util.Log;
 
 import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.AssertPoint;
 import org.twinlife.twinlife.RepositoryObject;

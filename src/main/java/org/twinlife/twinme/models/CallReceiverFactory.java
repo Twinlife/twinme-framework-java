@@ -18,6 +18,7 @@ import org.twinlife.twinlife.BaseService;
 import org.twinlife.twinlife.BaseService.AttributeNameValue;
 import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.DatabaseIdentifier;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.RepositoryImportService;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryObjectFactory;
@@ -122,13 +123,13 @@ public class CallReceiverFactory extends TwinmeObjectFactory implements Reposito
 
         if (!(callReceiver instanceof CallReceiver)) {
             Log.e(LOG_TAG, "object is not a call receiver: " + callReceiver);
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, callReceiver);
+            consumer.onGet(ErrorCode.BAD_REQUEST, callReceiver);
             return;
         }
 
         if (!(twinlifeContext instanceof TwinmeContext)) {
             Log.e(LOG_TAG, "twinlifeContext is not a TwinmeContext: "+twinlifeContext);
-            consumer.onGet(BaseService.ErrorCode.LIBRARY_ERROR, callReceiver);
+            consumer.onGet(ErrorCode.LIBRARY_ERROR, callReceiver);
             return;
         }
 
@@ -141,10 +142,10 @@ public class CallReceiverFactory extends TwinmeObjectFactory implements Reposito
         }
 
         twinmeContext.getTwincodeOutboundService().updateTwincode(callReceiver.getTwincodeOutbound(), callReceiver.getTwincodeOutbound().getAttributes(), null, (errorCode, twincode) -> {
-            if (errorCode == BaseService.ErrorCode.ITEM_NOT_FOUND || errorCode == BaseService.ErrorCode.EXPIRED) {
+            if (errorCode == ErrorCode.ITEM_NOT_FOUND || errorCode == ErrorCode.EXPIRED) {
                 twinmeContext.changeCallReceiverTwincode(BaseService.DEFAULT_REQUEST_ID, (CallReceiver) callReceiver, (err, updatedCallReceiver) -> consumer.onGet(err, callReceiver));
                 return;
-            } else if (errorCode != BaseService.ErrorCode.SUCCESS) {
+            } else if (errorCode != ErrorCode.SUCCESS) {
                 Log.e(LOG_TAG, "Error invoking twincode: " + errorCode + " for call receiver " + callReceiver);
             } else if (DEBUG) {
                 Log.d(LOG_TAG, "Successfully updated twincode for call receiver " + callReceiver);
@@ -161,12 +162,12 @@ public class CallReceiverFactory extends TwinmeObjectFactory implements Reposito
 
         if (!(callReceiver instanceof CallReceiver)) {
             Log.e(LOG_TAG, "object is not a call receiver: " + callReceiver);
-            consumer.onGet(BaseService.ErrorCode.BAD_REQUEST, callReceiver);
+            consumer.onGet(ErrorCode.BAD_REQUEST, callReceiver);
             return;
         }
 
         if (!(twinlifeContext instanceof TwinmeContext)) {
-            consumer.onGet(BaseService.ErrorCode.LIBRARY_ERROR, null);
+            consumer.onGet(ErrorCode.LIBRARY_ERROR, null);
         } else {
             ((TwinmeContext) twinlifeContext).deleteCallReceiver(1L, (CallReceiver) callReceiver, (errorCode, uuid) -> consumer.onGet(errorCode, callReceiver));
         }

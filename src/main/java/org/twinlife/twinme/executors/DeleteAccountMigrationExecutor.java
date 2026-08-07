@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import android.util.Log;
 
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.TwincodeInbound;
 import org.twinlife.twinlife.TwincodeOutbound;

@@ -14,7 +14,7 @@ import androidx.annotation.Nullable;
 import android.util.Log;
 
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.ConversationService.Conversation;
 import org.twinlife.twinlife.ConversationService.Descriptor;
@@ -113,6 +113,7 @@ public class CreateInvitationExecutor extends AbstractTimeoutTwinmeExecutor {
     private TwincodeOutbound mTwincodeOutbound;
     private Invitation mInvitation;
     private TwincodeURI mTwincodeURI;
+    private ConversationService.DescriptorId mDescriptorId;
     @NonNull
     private final Space mSpace;
     private long mPermissions;
@@ -120,8 +121,35 @@ public class CreateInvitationExecutor extends AbstractTimeoutTwinmeExecutor {
     private final ConversationServiceObserver mConversationServiceObserver;
 
     public CreateInvitationExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId,
-                                    @NonNull Space space,
-                                    @Nullable GroupMember contactGroupMember) {
+                                    @NonNull Space space) {
+        super(twinmeContextImpl, requestId, LOG_TAG, DEFAULT_TIMEOUT);
+
+        mConversationServiceObserver = new ConversationServiceObserver();
+        mTwincodeInboundId = null;
+        mTwincodeOutboundId = null;
+        mContact = null;
+        mSpace = space;
+        mGroupId = null;
+        mGroupMemberTwincodeId = null;
+        mGroup = null;
+        mSendTo = mGroupMemberTwincodeId;
+        Profile profile = mSpace.getProfile();
+
+        if (profile != null) {
+            mIdentityName = profile.getName();
+            mIdentityAvatarId = profile.getAvatarId();
+            mIdentityTwincodeOutbound = profile.getTwincodeOutbound();
+        } else {
+            mIdentityName = null;
+            mIdentityAvatarId = null;
+            mIdentityTwincodeOutbound = null;
+            mStopped = true;
+        }
+    }
+
+    public CreateInvitationExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId,
+                                    @NonNull Space space, @Nullable GroupMember contactGroupMember,
+                                    @Nullable ConversationService.DescriptorId contactShareDescriptorId) {
         super(twinmeContextImpl, requestId, LOG_TAG, DEFAULT_TIMEOUT);
 
         mConversationServiceObserver = new ConversationServiceObserver();
@@ -138,6 +166,7 @@ public class CreateInvitationExecutor extends AbstractTimeoutTwinmeExecutor {
             mGroupMemberTwincodeId = null;
         }
         mSendTo = mGroupMemberTwincodeId;
+        mDescriptorId = contactShareDescriptorId;
         Profile profile = mSpace.getProfile();
 
         if (profile != null) {
@@ -396,6 +425,7 @@ public class CreateInvitationExecutor extends AbstractTimeoutTwinmeExecutor {
                         invitation.setSpace(mSpace);
                         invitation.setTwincodeFactory(mInvitationTwincode);
                         invitation.setTwincodeOutbound(mTwincodeOutbound);
+                        invitation.setDescriptorId(mDescriptorId);
                     }, this::onCreateObject);
             return;
         }

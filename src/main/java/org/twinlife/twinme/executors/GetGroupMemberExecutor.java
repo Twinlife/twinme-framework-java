@@ -16,7 +16,7 @@ import android.graphics.Bitmap;
 import android.util.Log;
 
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
 import org.twinlife.twinlife.TwincodeOutboundService;

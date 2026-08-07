@@ -367,6 +367,10 @@ public interface TwinmeContext extends TwinlifeContext {
     // Contact invitation management
     //
 
+    void createInvitation(long requestId);
+
+    void createInvitation(long requestId, @Nullable Space space, @NonNull DescriptorId contactShareDescriptorId);
+
     void createInvitation(long requestId, @Nullable GroupMember contactGroupMember);
 
     void createInvitation(long requestId, @NonNull Group group, long permissions);
@@ -490,6 +494,9 @@ public interface TwinmeContext extends TwinlifeContext {
 
     void setActiveConversation(@NonNull Conversation conversation);
 
+    @Nullable
+    UUID getActiveConversationId();
+
     void resetActiveConversation(@NonNull Conversation conversation);
 
     void markDescriptorRead(long requestId, @NonNull DescriptorId descriptorId);
@@ -523,6 +530,12 @@ public interface TwinmeContext extends TwinlifeContext {
 
     void pushPoll(long requestId, @NonNull Conversation conversation, @Nullable UUID sendTo, boolean multipleAnswersAllowed,
                   @NonNull String question, @NonNull List<ConversationService.PollDescriptor.Choice> choices, boolean copyAllowed, long expiration);
+
+    void pushContactShare(long requestId, @NonNull Conversation conversation, @Nullable UUID sendTo, @NonNull String name,
+                          @NonNull byte[] avatar, @NonNull UUID contactId, long expiration);
+
+    void answerContactShare(@NonNull Conversation conversation, @NonNull ConversationService.ContactShareDescriptor contactShareDescriptor,
+                            @Nullable Space space, @NonNull InvitationDescriptor.Status answer, boolean autoAnswer);
 
     void withdrawInviteGroup(long requestId, @NonNull ConversationService.InvitationDescriptor descriptor);
 

@@ -15,7 +15,7 @@ import androidx.annotation.Nullable;
 import android.graphics.Bitmap;
 import android.util.Log;
 
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.ImageService;

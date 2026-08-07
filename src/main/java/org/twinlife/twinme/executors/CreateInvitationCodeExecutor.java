@@ -13,7 +13,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.InvitationCode;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.models.Invitation;
@@ -90,8 +90,7 @@ public class CreateInvitationCodeExecutor extends AbstractTimeoutTwinmeExecutor 
 
             long requestId = newOperation(CREATE_INVITATION);
 
-            mTwinmeContext.createInvitation(requestId, null);
-
+            mTwinmeContext.createInvitation(requestId);
             return;
         }
 

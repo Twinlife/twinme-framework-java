@@ -14,7 +14,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
 import org.twinlife.twinlife.TwincodeOutboundService;
@@ -103,8 +103,15 @@ public class GetTwincodeAction extends TwinmeAction {
                 if (DEBUG) {
                     Log.d(LOG_TAG, "ImageService.getImage: imageId=" + mTwincodeAvatarId);
                 }
+
                 Bitmap image = mTwinmeContext.getImageService().getImage(mTwincodeAvatarId, ImageService.Kind.THUMBNAIL);
-                onGetImage(image);
+                if (image == null) {
+                    mTwinmeContext.getImageService().getImageFromServer(mTwincodeAvatarId, ImageService.Kind.THUMBNAIL, (ErrorCode errorCode, Bitmap img) -> {
+                        onGetImage(img);
+                    });
+                } else {
+                    onGetImage(image);
+                }
             }
             if ((mState & GET_TWINCODE_IMAGE_DONE) == 0) {
                 return;

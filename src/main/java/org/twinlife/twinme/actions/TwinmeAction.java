@@ -12,7 +12,7 @@ package org.twinlife.twinme.actions;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinme.TwinmeContext;
 
 /**

@@ -16,7 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.AssertPoint;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ImageService;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinme.TwinmeContextImpl;

@@ -16,7 +16,7 @@ import androidx.annotation.Nullable;
 import android.util.Log;
 
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.ImageService;
 import org.twinlife.twinlife.RepositoryObject;
@@ -295,7 +295,7 @@ public class CreateProfileExecutor extends AbstractTimeoutTwinmeExecutor {
         onOperation();
     }
 
-    private void onCreateObject(BaseService.ErrorCode errorCode, @Nullable RepositoryObject object) {
+    private void onCreateObject(ErrorCode errorCode, @Nullable RepositoryObject object) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onCreateObject: errorCode=" + errorCode + " object=" + object);
         }

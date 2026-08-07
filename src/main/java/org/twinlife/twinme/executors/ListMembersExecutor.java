@@ -13,10 +13,9 @@ import androidx.annotation.Nullable;
 
 import android.util.Log;
 
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.Consumer;
-import org.twinlife.twinlife.RosterId;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.models.Group;
 import org.twinlife.twinme.models.GroupMember;

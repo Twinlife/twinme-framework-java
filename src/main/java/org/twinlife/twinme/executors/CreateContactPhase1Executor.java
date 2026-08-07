@@ -17,7 +17,7 @@ import androidx.annotation.Nullable;
 
 import org.twinlife.twinlife.AssertPoint;
 import org.twinlife.twinlife.BaseService;
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ExportedImageId;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.ImageService;
@@ -389,7 +389,7 @@ public class CreateContactPhase1Executor extends AbstractTimeoutTwinmeExecutor {
         onOperation();
     }
 
-    private void onCreateObject(@NonNull BaseService.ErrorCode errorCode, @Nullable RepositoryObject object) {
+    private void onCreateObject(@NonNull ErrorCode errorCode, @Nullable RepositoryObject object) {
         if (DEBUG) {
             Log.d(LOG_TAG, "onCreateObject: errorCode=" + errorCode + " object=" + object);
         }

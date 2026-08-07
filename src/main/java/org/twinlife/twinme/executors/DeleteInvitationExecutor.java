@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019-2024 twinlife SA.
+ *  Copyright (c) 2019-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import android.util.Log;
 
-import org.twinlife.twinlife.BaseService.ErrorCode;
+import org.twinlife.twinlife.ErrorCode;
 import org.twinlife.twinlife.ConversationService.Conversation;
 import org.twinlife.twinlife.ConversationService.DescriptorId;
 import org.twinlife.twinlife.ConversationService.Descriptor;
@@ -76,11 +76,12 @@ public class DeleteInvitationExecutor extends AbstractTimeoutTwinmeExecutor {
     private final UUID mTwincodeFactoryId;
     @Nullable
     private final DescriptorId mDescriptorId;
+    private final boolean mKeepDescriptor;
 
     private final ConversationServiceObserver mConversationServiceObserver;
 
     public DeleteInvitationExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId,
-                                    @NonNull Invitation invitation, long timeout) {
+                                    @NonNull Invitation invitation, long timeout, boolean keepDescriptor) {
         super(twinmeContextImpl, requestId, LOG_TAG, timeout);
         if (DEBUG) {
             Log.d(LOG_TAG, "DeleteGroupExecutor: twinmeContextImpl=" + twinmeContextImpl
@@ -92,6 +93,7 @@ public class DeleteInvitationExecutor extends AbstractTimeoutTwinmeExecutor {
         mTwincodeFactoryId = invitation.getTwincodeFactoryId();
         mInvitationAvatarId = invitation.getAvatarId();
         mDescriptorId = invitation.getDescriptorId();
+        mKeepDescriptor = keepDescriptor;
 
         mConversationServiceObserver = new ConversationServiceObserver();
     }
@@ -203,8 +205,7 @@ public class DeleteInvitationExecutor extends AbstractTimeoutTwinmeExecutor {
         //
         // Step 3: delete the invitation descriptor.
         //
-
-        if (mDescriptorId != null) {
+        if (mDescriptorId != null && !mKeepDescriptor) {
 
             if ((mState & DELETE_INVITATION_DESCRIPTOR) == 0) {
                 mState |= DELETE_INVITATION_DESCRIPTOR;
