@@ -20,11 +20,13 @@ import org.twinlife.twinlife.Consumer;
 import org.twinlife.twinlife.ConversationService;
 import org.twinlife.twinlife.DatabaseIdentifier;
 import org.twinlife.twinlife.ErrorCode;
+import org.twinlife.twinlife.Permission;
 import org.twinlife.twinlife.RepositoryImportService;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryObjectFactory;
 import org.twinlife.twinlife.TwincodeOutbound;
 import org.twinlife.twinlife.TwinlifeContext;
+import org.twinlife.twinlife.conversation.GroupProtocol;
 import org.twinlife.twinlife.util.Utils;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.executors.RefreshRosterExecutor;
@@ -150,8 +152,10 @@ public class GroupFactory extends TwinmeObjectFactory implements RepositoryObjec
             return;
         }
 
+        Permission joinPermission = GroupProtocol.getJoinPermissions(groupTwincode);
+        Permission memberPermission = groupTwincode.isOwner() ? Permission.ALL_PERMISSIONS : joinPermission;
         // Create the conversation, required for the group to work properly (unlike contacts).
-        ConversationService.GroupConversation groupConversation = twinmeContext.getConversationService().createGroup(group, groupTwincode.isOwner());
+        ConversationService.GroupConversation groupConversation = twinmeContext.getConversationService().createGroup(group, groupTwincode.isOwner(), memberPermission, joinPermission);
 
         if (groupConversation == null) {
             Log.e(LOG_TAG, "Conversation could not be created for group: " + group);

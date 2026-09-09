@@ -44,6 +44,7 @@ import org.twinlife.twinlife.NotificationService.NotificationStat;
 import org.twinlife.twinlife.NotificationService.NotificationType;
 import org.twinlife.twinlife.PeerConnectionService;
 import org.twinlife.twinlife.Offer;
+import org.twinlife.twinlife.Permission;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.RepositoryObjectFactory;
 import org.twinlife.twinlife.TerminateReason;
@@ -92,6 +93,7 @@ import org.twinlife.twinme.executors.UnbindContactExecutor;
 import org.twinlife.twinme.executors.UpdateCallReceiverExecutor;
 import org.twinlife.twinme.executors.UpdateContactAndIdentityExecutor;
 import org.twinlife.twinme.executors.UpdateGroupExecutor;
+import org.twinlife.twinme.executors.UpdateGroupPermissionsExecutor;
 import org.twinlife.twinme.executors.UpdateNotificationExecutor;
 import org.twinlife.twinme.executors.UpdateOrganizerExecutor;
 import org.twinlife.twinme.executors.UpdateProfileExecutor;
@@ -236,7 +238,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         mRelationOrchestrator = new RelationOrchestrator(this, mTwinlifeExecutor);
         mConferenceOrchestrator = new ConferenceOrchestrator(this, mTwinlifeExecutor);
         mSecureRosterOrchestrator = new SecureRosterOrchestrator(this, mTwinlifeExecutor);
-        mConversationOrchestrator = new ConversationOrchestrator(this, mTwinmeApplication, mTwinlifeImpl);
+        mConversationOrchestrator = new ConversationOrchestrator(this, mTwinmeApplication);
 
         mPendingActions = new TreeSet<>();
 
@@ -1294,9 +1296,11 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
     }
 
     @Override
-    public void createGroup(long requestId, @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile) {
+    public void createGroup(long requestId, @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile,
+                            @NonNull Permission memberPermissions, @NonNull Permission joinPermissions) {
         if (DEBUG) {
-            Log.d(LOG_TAG, "createGroup: requestId=" + requestId + " name=" + name + " avatarFile=" + avatarFile );
+            Log.d(LOG_TAG, "createGroup: requestId=" + requestId + " name=" + name + " avatarFile=" + avatarFile
+                    + " memberPermissions=" + memberPermissions + " joinPermissions=" + joinPermissions);
         }
 
         final Space space = mCurrentSpace;
@@ -1305,7 +1309,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             return;
         }
         CreateGroupExecutor createGroupExecutor = new CreateGroupExecutor(this, requestId, space,
-                name, description, avatar, avatarFile);
+                name, description, avatar, avatarFile, memberPermissions, joinPermissions);
         mTwinlifeExecutor.execute(createGroupExecutor::start);
     }
 
@@ -1357,6 +1361,16 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
         }
 
         UpdateGroupExecutor updateGroupExecutor = new UpdateGroupExecutor(this, requestId, group, null, null, null, null, name, avatar, avatarFile, null);
+        mTwinlifeExecutor.execute(updateGroupExecutor::start);
+    }
+
+    @Override
+    public void updateGroupPermissions(long requestId, @NonNull Group group, @NonNull Permission memberPermissions) {
+        if (DEBUG) {
+            Log.d(LOG_TAG, "updateGroupPermissions: requestId=" + requestId + " group=" + group + " memberPermissions=" + memberPermissions);
+        }
+
+        UpdateGroupPermissionsExecutor updateGroupExecutor = new UpdateGroupPermissionsExecutor(this, requestId, group, memberPermissions);
         mTwinlifeExecutor.execute(updateGroupExecutor::start);
     }
 
@@ -2031,19 +2045,7 @@ public class TwinmeContextImpl extends TwinlifeContextImpl implements TwinmeCont
             List<org.twinlife.twinlife.Notification> notifications = getNotificationService().getPendingNotifications(subject);
             for (org.twinlife.twinlife.Notification notification : notifications) {
                 NotificationType type = notification.getNotificationType();
-                if (!notification.isAcknowledged() && (type == NotificationType.NEW_TEXT_MESSAGE
-                        || type == NotificationType.NEW_AUDIO_MESSAGE
-                        || type == NotificationType.NEW_IMAGE_MESSAGE
-                        || type == NotificationType.NEW_VIDEO_MESSAGE
-                        || type == NotificationType.NEW_FILE_MESSAGE
-                        || type == NotificationType.NEW_GEOLOCATION
-                        || type == NotificationType.NEW_GROUP_INVITATION
-                        || type == NotificationType.UPDATED_CONTACT
-                        || type == NotificationType.UPDATED_AVATAR_CONTACT
-                        || type == NotificationType.NEW_CONTACT
-                        || type == NotificationType.NEW_GROUP_JOINED
-                        || type == NotificationType.RESET_CONVERSATION
-                        || type == NotificationType.UPDATED_ANNOTATION)) {
+                if (type.isAcknowledgeable() && !notification.isAcknowledged()) {
                     acknowledgeNotification(BaseService.DEFAULT_REQUEST_ID, notification);
                 }
             }

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019-2020 twinlife SA.
+ *  Copyright (c) 2019-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -12,9 +12,11 @@ package org.twinlife.twinme.util;
 import org.twinlife.twinlife.ConfigIdentifier;
 import org.twinlife.twinlife.ConfigurationService;
 import org.twinlife.twinlife.ConversationService.GeolocationDescriptor;
-import org.twinlife.twinlife.Twinlife;
 
 import static org.twinlife.twinme.TwinmeContext.ENABLE_REPORT_LOCATION;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public class LocationReport {
 
@@ -23,9 +25,8 @@ public class LocationReport {
     private static final ConfigIdentifier LATITUDE = new ConfigIdentifier("location", "latitude", "BC837810-1882-4199-ACF9-DB1177B3EC6F", Float.class);
     private static final ConfigIdentifier ALTITUDE = new ConfigIdentifier("location", "altitude", "3EC08BE2-32C4-48BC-8343-5FEDB55EEF3F", Float.class);
 
-    public static void recordGeolocation(Twinlife twinlife, GeolocationDescriptor geolocationDescriptor) {
+    public static void recordGeolocation(@NonNull ConfigurationService configurationService, @NonNull GeolocationDescriptor geolocationDescriptor) {
         if (ENABLE_REPORT_LOCATION) {
-            ConfigurationService configurationService = twinlife.getConfigurationService();
             ConfigurationService.Configuration savedConfiguration = configurationService.getConfiguration(LAST_TIMESTAMP);
 
             savedConfiguration.setLongConfig(LAST_TIMESTAMP, geolocationDescriptor.getCreatedTimestamp());
@@ -36,9 +37,9 @@ public class LocationReport {
         }
     }
 
-    public static String getReport(Twinlife twinlife) {
+    @Nullable
+    public static String getReport(@NonNull ConfigurationService configurationService) {
         if (ENABLE_REPORT_LOCATION) {
-            ConfigurationService configurationService = twinlife.getConfigurationService();
             ConfigurationService.Configuration savedConfiguration = configurationService.getConfiguration(LAST_TIMESTAMP);
 
             long timestamp = savedConfiguration.getLongConfig(LAST_TIMESTAMP, 0);

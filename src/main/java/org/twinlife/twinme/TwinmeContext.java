@@ -29,6 +29,7 @@ import org.twinlife.twinlife.Filter;
 import org.twinlife.twinlife.ImageId;
 import org.twinlife.twinlife.Notification;
 import org.twinlife.twinlife.NotificationService;
+import org.twinlife.twinlife.Permission;
 import org.twinlife.twinlife.RepositoryObject;
 import org.twinlife.twinlife.TrustMethod;
 import org.twinlife.twinlife.TwincodeOutbound;
@@ -401,13 +402,16 @@ public interface TwinmeContext extends TwinlifeContext {
 
     void findGroups(@NonNull Filter<RepositoryObject> filter, @NonNull Consumer<List<Group>> consumer);
 
-    void createGroup(long requestId, @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile);
+    void createGroup(long requestId, @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile,
+                     @NonNull Permission memberPermissions, @NonNull Permission joinPermissions);
 
     void createGroup(long requestId, @NonNull InvitationDescriptor invitation);
 
     void updateGroup(long requestId, @NonNull Group group, @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile, @Nullable Capabilities capabilities);
 
     void updateGroupProfile(long requestId, @NonNull Group group, @NonNull String name, @Nullable Bitmap avatar, @Nullable File avatarFile);
+
+    void updateGroupPermissions(long requestId, @NonNull Group group, @NonNull Permission memberPermissions);
 
     void deleteGroup(long requestId, @NonNull Group group);
 

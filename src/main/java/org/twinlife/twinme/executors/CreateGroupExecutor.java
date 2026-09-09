@@ -128,11 +128,16 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
     private final TwincodeOutbound mInvitationTwincode;
     @Nullable
     private final InvitationDescriptor mInvitation;
+    @NonNull
+    private Permission mMemberPermissions;
+    @NonNull
+    private Permission mJoinPermissions;
     private GroupConversation mConversation;
     private RosterId mSecureRosterId;
 
     public CreateGroupExecutor(@NonNull TwinmeContextImpl twinmeContextImpl, long requestId, @NonNull Space space,
-                               @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile) {
+                               @NonNull String name, @Nullable String description, @Nullable Bitmap avatar, @Nullable File avatarFile,
+                               @NonNull Permission memberPermissions, @NonNull Permission joinPermissions) {
         super(twinmeContextImpl, requestId, LOG_TAG, DEFAULT_TIMEOUT);
 
         mSpace = space;
@@ -146,6 +151,8 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         mInvitationTwincode = null;
         mConversation = null;
         mInvitation = null;
+        mMemberPermissions = memberPermissions;
+        mJoinPermissions = joinPermissions;
         mState |= FIND_GROUP;
 
         Profile profile = space.getProfile();
@@ -170,6 +177,8 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         mInvitationTwincode = null;
         mConversation = null;
         mInvitation = invitation;
+        mMemberPermissions = Permission.ALLOW_POST;
+        mJoinPermissions = Permission.ALLOW_POST;
 
         Profile profile = space.getProfile();
         if (profile != null) {
@@ -196,6 +205,8 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         mInvitedByMemberTwincodeId = null;
         mIsOwner = false;
         mInvitationTwincode = invitationTwincode;
+        mMemberPermissions = Permission.ALLOW_POST;
+        mJoinPermissions = Permission.ALLOW_POST;
 
         Profile profile = space.getProfile();
         if (profile != null) {
@@ -221,6 +232,8 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         mInvitationTwincode = null;
         mConversation = null;
         mInvitation = null;
+        mMemberPermissions = Permission.ALLOW_POST;
+        mJoinPermissions = Permission.ALLOW_POST;
 
         Profile profile = space.getProfile();
         if (profile != null) {
@@ -452,8 +465,8 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
                     TwinmeAttributes.setTwincodeAttributeDescription(twincodeOutboundAttributes, mDescription);
                 }
                 TwinmeAttributes.setTwincodeAttributeCreatedBy(twincodeOutboundAttributes, mMemberTwincodeOutbound.getId());
-                TwinmeAttributes.setTwincodeAttributeRosterId(twincodeOutboundAttributes, mSecureRosterId);
-
+                GroupProtocol.setSecureRosterId(twincodeOutboundAttributes, mSecureRosterId);
+                GroupProtocol.setJoinPermissions(twincodeOutboundAttributes, mJoinPermissions);
                 if (DEBUG) {
                     Log.d(LOG_TAG, "updateTwincode: twincodeOutboundAttributes=" + twincodeOutboundAttributes);
                 }
@@ -590,7 +603,7 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
         // cleanup the group that was created and report the error.
         //
         if (mConversation == null) {
-            mConversation = mTwinmeContextImpl.getConversationService().createGroup(mGroup, mIsOwner);
+            mConversation = mTwinmeContextImpl.getConversationService().createGroup(mGroup, mIsOwner, mMemberPermissions, mJoinPermissions);
             if (mConversation == null) {
                 DeleteGroupExecutor deleteGroupExecutor = new DeleteGroupExecutor(mTwinmeContextImpl, mTwinmeContextImpl.newRequestId(), mGroup, 0);
                 deleteGroupExecutor.start();
@@ -719,6 +732,8 @@ public class CreateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
 
         mGroupTwincodeOutbound = twincodeOutbound;
         mGroupAvatarId = mGroupTwincodeOutbound.getAvatarId();
+        mJoinPermissions = GroupProtocol.getJoinPermissions(twincodeOutbound);
+        mMemberPermissions = mJoinPermissions;
         onOperation();
     }
 

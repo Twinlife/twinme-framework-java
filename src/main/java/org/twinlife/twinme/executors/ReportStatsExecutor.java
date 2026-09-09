@@ -211,7 +211,7 @@ public class ReportStatsExecutor extends AbstractConnectedTwinmeExecutor {
 
             // Send the last known location if the report is enabled and we know the position.
             if (TwinmeContext.ENABLE_REPORT_LOCATION) {
-                final String report = LocationReport.getReport(mTwinlife);
+                final String report = LocationReport.getReport(mTwinmeContextImpl.getConfigurationService());
                 if (report != null) {
                     attributes.put(LOCATION_REPORT, LOCATION_REPORT_VERSION + report);
                 }

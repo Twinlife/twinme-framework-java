@@ -26,7 +26,6 @@ import org.twinlife.twinlife.RepositoryService.StatType;
 import org.twinlife.twinlife.ShareInvitationMode;
 import org.twinlife.twinlife.TerminateReason;
 import org.twinlife.twinlife.TwincodeOutbound;
-import org.twinlife.twinlife.Twinlife;
 import org.twinlife.twinme.models.Capabilities;
 import org.twinlife.twinme.models.Contact;
 import org.twinlife.twinme.models.GroupMember;
@@ -99,13 +98,9 @@ final class ConversationOrchestrator extends ConversationService.DefaultServiceO
     @NonNull
     private final TwinmeApplication mTwinmeApplication;
 
-    @NonNull
-    private final Twinlife mTwinlife;
-
-    ConversationOrchestrator(@NonNull TwinmeContextImpl twinmeContext, @NonNull TwinmeApplication twinmeApplication, @NonNull Twinlife twinlife) {
+    ConversationOrchestrator(@NonNull TwinmeContextImpl twinmeContext, @NonNull TwinmeApplication twinmeApplication) {
         mTwinmeContext = twinmeContext;
         mTwinmeApplication = twinmeApplication;
-        mTwinlife = twinlife;
     }
 
     void onTwinlifeReady() {
@@ -228,7 +223,7 @@ final class ConversationOrchestrator extends ConversationService.DefaultServiceO
         }
 
         if (type == Descriptor.Type.GEOLOCATION_DESCRIPTOR && TwinmeContext.ENABLE_REPORT_LOCATION) {
-            LocationReport.recordGeolocation(mTwinlife, (ConversationService.GeolocationDescriptor) descriptor);
+            LocationReport.recordGeolocation(mTwinmeContext.getConfigurationService(), (ConversationService.GeolocationDescriptor) descriptor);
         }
     }
 

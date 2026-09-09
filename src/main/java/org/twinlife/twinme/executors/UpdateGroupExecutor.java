@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2015-2024 twinlife SA.
+ *  Copyright (c) 2015-2026 twinlife SA.
  *  SPDX-License-Identifier: AGPL-3.0-only
  *
  *  Contributors:
@@ -377,7 +377,7 @@ public class UpdateGroupExecutor extends AbstractTimeoutTwinmeExecutor {
                     TwinmeAttributes.setTwincodeAttributeAvatarId(attributes, mGroupAvatarId);
                 }
                 if (!Utils.equals(mGroupDescription, mGroup.getDescription())) {
-                    if(mGroupDescription != null) {
+                    if (mGroupDescription != null) {
                         TwinmeAttributes.setTwincodeAttributeDescription(attributes, mGroupDescription);
                     } else {
                         deleteAttributes.add(Twincode.DESCRIPTION);

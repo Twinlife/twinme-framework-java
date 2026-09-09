@@ -59,11 +59,6 @@ public class TwinmeAttributes {
         attributes.add(new AttributeNameStringValue(TWINCODE_ATTRIBUTE_CREATED_BY, twincodeId.toString()));
     }
 
-    public static void setTwincodeAttributeRosterId(@NonNull List<AttributeNameValue> attributes, @NonNull RosterId rosterId) {
-
-        attributes.add(new AttributeNameStringValue(Twincode.ROSTER_ID, rosterId.id + ":" + rosterId.schemaId));
-    }
-
     public static void setTwincodeAttributeInvitedBy(@NonNull List<AttributeNameValue> attributes, @NonNull UUID twincodeId) {
 
         attributes.add(new AttributeNameStringValue(TWINCODE_ATTRIBUTE_INVITED_BY, twincodeId.toString()));

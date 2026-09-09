@@ -26,6 +26,7 @@ import org.twinlife.twinlife.SecureRosterService;
 import org.twinlife.twinlife.TwincodeInbound;
 import org.twinlife.twinlife.TwincodeOutbound;
 import org.twinlife.twinlife.TwinlifeImpl;
+import org.twinlife.twinlife.conversation.GroupProtocol;
 import org.twinlife.twinme.TwinmeContextImpl;
 import org.twinlife.twinme.models.Group;
 import org.twinlife.twinme.util.TwinmeAttributes;
@@ -231,8 +232,11 @@ public class UpgradeGroupsExecutor extends AbstractConnectedTwinmeExecutor {
                     mState |= UPDATE_GROUP_TWINCODE;
 
                     final List<BaseService.AttributeNameValue> twincodeOutboundAttributes = new ArrayList<>();
-                    TwinmeAttributes.setTwincodeAttributeRosterId(twincodeOutboundAttributes, mSecureRosterId);
+                    GroupProtocol.setSecureRosterId(twincodeOutboundAttributes, mSecureRosterId);
 
+                    if (mGroupConversation != null) {
+                        GroupProtocol.setJoinPermissions(twincodeOutboundAttributes, mGroupConversation.getJoinPermissions());
+                    }
                     if (DEBUG) {
                         Log.d(LOG_TAG, "updateTwincode: twincodeOutboundAttributes=" + twincodeOutboundAttributes);
                     }
